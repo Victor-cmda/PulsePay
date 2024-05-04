@@ -3,6 +3,7 @@ using Application.Interfaces;
 using Domain.Entities.GetNet.Pix;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -10,11 +11,13 @@ namespace Infrastructure.Adapters.PaymentGateway
     {
         private readonly HttpClient _httpClient;
         private readonly string _apiBaseUrl;
+        private readonly string _sellerId;
 
-        public GetNetAdapter(HttpClient httpClient, string apiBaseUrl)
+        public GetNetAdapter(HttpClient httpClient, string apiBaseUrl, IConfiguration configuration)
         {
             _httpClient = httpClient;
             _apiBaseUrl = apiBaseUrl;
+            _sellerId = configuration["PaymentApiSettings:GetNet:SellerId"];
         }
 
         public async Task<PaymentResponse> ProcessPayment(decimal amount, string currency, string orderId, string customerId, string authToken)
@@ -27,11 +30,7 @@ namespace Infrastructure.Adapters.PaymentGateway
                 customer_id = customerId
             };
 
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            _httpClient.DefaultRequestHeaders.Add("seller_id", "c4e1b79c-9f55-4577-a05c-349e61c64dfb");
-
+             ConfigureHttpClientHeaders(authToken);
 
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", paymentRequest);
             if (!response.IsSuccessStatusCode)
@@ -54,6 +53,15 @@ namespace Infrastructure.Adapters.PaymentGateway
                 description = paymentResponse.description,
                 additional_data = paymentResponse.additional_data
             };
+        }
+
+        private void ConfigureHttpClientHeaders(string authToken)
+        {
+            _httpClient.DefaultRequestHeaders.Accept.Clear();
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            _httpClient.DefaultRequestHeaders.Add("seller_id", _sellerId);
         }
     }
 }

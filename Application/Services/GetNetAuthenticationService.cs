@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -11,10 +12,13 @@ namespace Application.Services
         private readonly string _clientId;
         private readonly string _clientSecret;
         private readonly string _baseUrl;
+        private readonly IMemoryCache _memoryCache;
+        private const string TokenCacheKey = "GetNetAuthToken";
 
-        public GetNetAuthenticationService(HttpClient httpClient, IConfiguration configuration)
+        public GetNetAuthenticationService(HttpClient httpClient, IConfiguration configuration, IMemoryCache memoryCache)
         {
             _httpClient = httpClient;
+            _memoryCache = memoryCache;
             _clientId = configuration["PaymentApiSettings:GetNet:ClientId"];
             _clientSecret = configuration["PaymentApiSettings:GetNet:ClientSecret"];
             _baseUrl = configuration["PaymentApiSettings:GetNet:AuthBasicUrl"];
@@ -22,6 +26,11 @@ namespace Application.Services
 
         public async Task<string> GetTokenAsync()
         {
+            if (_memoryCache.TryGetValue(TokenCacheKey, out string cachedToken))
+            {
+                return cachedToken;
+            }
+
             string credentials = $"{_clientId}:{_clientSecret}";
             string encodedCredentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(credentials));
 
@@ -38,7 +47,10 @@ namespace Application.Services
             response.EnsureSuccessStatusCode();
             var responseStream = await response.Content.ReadAsStringAsync();
             var tokenData = JsonSerializer.Deserialize<JsonElement>(responseStream);
-            return tokenData.GetProperty("access_token").GetString();
+            string newToken = tokenData.GetProperty("access_token").GetString();
+            _memoryCache.Set(TokenCacheKey, newToken, TimeSpan.FromSeconds(3600));
+
+            return newToken;
         }
     }
 }
