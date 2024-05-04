@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using System.Net.Http.Headers;
+using Application.Interfaces;
 using Domain.Entities.GetNet.Pix;
 using System.Net.Http.Json;
 
@@ -25,6 +26,10 @@ namespace Infrastructure.Adapters.PaymentGateway
                 CustomerId = customerId
             };
 
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            _httpClient.DefaultRequestHeaders.Add("seller_id", "c4e1b79c-9f55-4577-a05c-349e61c64dfb");
+            
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "/payments/qrcode/pix", paymentRequest);
             if (!response.IsSuccessStatusCode)
             {
