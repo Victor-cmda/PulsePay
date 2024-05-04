@@ -12,7 +12,7 @@ namespace Infrastructure.Factories
             switch (gatewayType)
             {
                 case "GetNet":
-                    return new GetNetAdapter(new HttpClient(), "https://api-homologacao.getnet.com.br/v1");
+                    return new GetNetAdapter(new HttpClient(), "https://api-sandbox.getnet.com.br/v1/");
                 case "PixFast":
                     return new GetNetAdapter(new HttpClient(), "https://api.pixfast.com.br");
                 default:

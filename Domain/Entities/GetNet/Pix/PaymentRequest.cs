@@ -2,9 +2,9 @@
 {
     public class PaymentRequest
     {
-        public decimal Amount { get; set; }
-        public string Currency { get; set; }
-        public string OrderId { get; set; }
-        public string CustomerId { get; set; }
+        public decimal amount { get; set; }
+        public string currency { get; set; }
+        public string order_id { get; set; }
+        public string customer_id { get; set; }
     }
 }

@@ -2,18 +2,18 @@
 {
     public class PaymentResponse
     {
-        public string PaymentId { get; set; }
-        public string Status { get; set; }
-        public string Description { get; set; }
-        public AdditionalData AdditionalData { get; set; }
+        public string payment_id { get; set; }
+        public string status { get; set; }
+        public string description { get; set; }
+        public AdditionalData additional_data { get; set; }
     }
 
     public class AdditionalData
     {
-        public string TransactionId { get; set; }
-        public string QrCode { get; set; }
-        public DateTime CreationDateQrCode { get; set; }
-        public DateTime ExpirationDateQrCode { get; set; }
-        public string PspCode { get; set; }
+        public string transaction_id { get; set; }
+        public string qr_code { get; set; }
+        public DateTime creation_date_qrcode { get; set; }
+        public DateTime expiration_date_qrcode { get; set; }
+        public string psp_code { get; set; }
     }
 }
