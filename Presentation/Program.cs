@@ -4,8 +4,6 @@ using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Factories;
-using Infrastructure.Repositories;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,13 +27,12 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresDatabase")));
 
-// Registro de serviços de cache
+// Registro de serviï¿½os de cache
 builder.Services.AddMemoryCache();
 
-// Registro de repositórios
-builder.Services.AddScoped<IUserRepository, UserRepository>();
+// Registro de repositï¿½rios
 
-// Registro de serviços
+// Registro de serviï¿½os
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
@@ -45,7 +42,7 @@ builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
 
-// Registro de serviços de integração com APIs - Autenticação
+// Registro de serviï¿½os de integraï¿½ï¿½o com APIs - Autenticaï¿½ï¿½o
 builder.Services.AddHttpClient<GetNetAuthenticationService>();
 
 var app = builder.Build();
