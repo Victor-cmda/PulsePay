@@ -1,20 +1,23 @@
 ﻿using System.Text.RegularExpressions;
 
-public class Email
+namespace Domain.ValueObjects.Email
 {
-    public string Value { get; private set; }
-
-    public Email(string value)
+    public class Email
     {
-        if (!Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
-            throw new ArgumentException("Invalid email format");
-        Value = value;
-    }
+        public string Value { get; private set; }
 
-    public override string ToString()
-    {
-        return Value;
-    }
+        public Email(string value)
+        {
+            if (!Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                throw new ArgumentException("Invalid email format");
+            Value = value;
+        }
 
-    protected Email() { }
+        public override string ToString()
+        {
+            return Value;
+        }
+
+        protected Email() { }
+    }
 }

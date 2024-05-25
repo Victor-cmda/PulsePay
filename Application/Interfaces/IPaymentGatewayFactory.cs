@@ -1,12 +1,7 @@
-﻿using Domain.Interfaces;
-
-namespace Application.Interfaces
+﻿namespace Application.Interfaces
 {
-    namespace Application.Interfaces
+    public interface IPaymentGatewayFactory
     {
-        public interface IPaymentGatewayFactory
-        {
-            IPaymentGateway CreateGateway(string type);
-        }
+        IPaymentGateway CreateGateway(string type);
     }
 }

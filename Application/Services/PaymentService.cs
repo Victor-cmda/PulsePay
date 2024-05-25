@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Application.Interfaces;
+﻿using Application.Interfaces;
 using Domain.Entities.GetNet.Pix;
 using Domain.Interfaces;
 

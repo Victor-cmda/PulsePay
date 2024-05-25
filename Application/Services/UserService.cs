@@ -1,5 +1,4 @@
-﻿using Application.DTOs;
-using Application.Interfaces;
+﻿using Application.Interfaces;
 using Domain.Interfaces;
 
 namespace Application.Services
@@ -13,11 +12,5 @@ namespace Application.Services
             _userRepository = userRepository;
         }
 
-        public async Task RegisterUserAsync(UserRegistrationDto userDto)
-        {
-            var email = new Email(userDto.Email);
-            var user = new User(email, userDto.Password);
-            await _userRepository.AddUserAsync(user);
-        }
     }
 }

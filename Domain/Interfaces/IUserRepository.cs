@@ -2,6 +2,5 @@
 {
     public interface IUserRepository
     {
-        Task AddUserAsync(User user);
     }
 }

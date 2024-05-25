@@ -1,5 +1,6 @@
 ﻿using Application.DTOs;
 using Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.API
@@ -15,6 +16,7 @@ namespace Presentation.API
             _paymentService = paymentService;
         }
 
+        //[Authorize]
         [HttpPost("process")]
         public async Task<IActionResult> ProcessPayment([FromBody] PaymentRequestDto paymentRequest)
         {

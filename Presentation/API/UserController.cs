@@ -15,11 +15,5 @@ namespace Presentation.API
             _userService = userService;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> RegisterUser(UserRegistrationDto userDto)
-        {
-            await _userService.RegisterUserAsync(userDto);
-            return Ok();
-        }
     }
 }

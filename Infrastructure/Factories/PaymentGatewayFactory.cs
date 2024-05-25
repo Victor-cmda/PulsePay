@@ -1,5 +1,4 @@
 ﻿using Application.Interfaces;
-using Application.Interfaces.Application.Interfaces;
 using Infrastructure.Adapters.PaymentGateway;
 using Microsoft.Extensions.Configuration;
 
@@ -17,7 +16,7 @@ namespace Infrastructure.Factories
             switch (gatewayType)
             {
                 case "GetNet":
-                    return new GetNetAdapter(new HttpClient(), "https://api-sandbox.getnet.com.br/v1/", _configuration);
+                    return new GetNetAdapter(new HttpClient(), "https://api.getnet.com.br/v1/", _configuration);
                 case "PixFast":
                     return new GetNetAdapter(new HttpClient(), "https://api.pixfast.com.br", _configuration);
                 default:
