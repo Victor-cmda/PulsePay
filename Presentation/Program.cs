@@ -38,6 +38,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("UserPolicy", policy =>
+        policy.RequireClaim("TokenType", "User"));
+
+    options.AddPolicy("ClientPolicy", policy =>
+        policy.RequireClaim("TokenType", "Client"));
+});
+
 // Add services to the container.
 builder.Services.AddCors(options =>
 {
@@ -88,12 +97,12 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresDatabase")));
 
-// Registro de servi�os de cache
+// Registro de servicos de cache
 builder.Services.AddMemoryCache();
 
-// Registro de reposit�rios
+// Registro de repositorios
 
-// Registro de servi�os
+// Registro de servicos
 //builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
@@ -103,7 +112,7 @@ builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
 
-// Registro de servicos de integracao com APIs - Autentica��o
+// Registro de servicos de integracao com APIs - Autenticacao
 builder.Services.AddHttpClient<GetNetAuthenticationService>();
 
 var app = builder.Build();

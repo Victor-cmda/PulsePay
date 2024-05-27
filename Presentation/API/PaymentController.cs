@@ -16,8 +16,8 @@ namespace Presentation.API
             _paymentService = paymentService;
         }
 
-        //[Authorize]
         [HttpPost("process")]
+        [Authorize(Policy = "ClientPolicy")]
         public async Task<IActionResult> ProcessPayment([FromBody] PaymentRequestDto paymentRequest)
         {
             try
