@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Presentation.API
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payment")]
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
@@ -16,14 +16,13 @@ namespace Presentation.API
             _paymentService = paymentService;
         }
 
-        [HttpPost("process")]
         [Authorize(Policy = "ClientPolicy")]
-        public async Task<IActionResult> ProcessPayment([FromBody] PaymentRequestDto paymentRequest)
+        [HttpPost("pix")]
+        public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentRequestDto paymentRequest)
         {
             try
             {
-                var response = await _paymentService.ProcessPayment(
-                    paymentRequest.Type,
+                var response = await _paymentService.GeneratePixPayment(
                     paymentRequest.Amount,
                     paymentRequest.Currency,
                     paymentRequest.OrderId,

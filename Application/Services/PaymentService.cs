@@ -15,12 +15,12 @@ namespace Application.Services
             _authFactory = authFactory;
         }
 
-        public async Task<PaymentResponse> ProcessPayment(string type, decimal amount, string currency, string orderId, string customerId)
+        public async Task<PaymentResponse> GeneratePixPayment(decimal amount, string currency, string orderId, string customerId)
         {
-            var authService = _authFactory.CreateAuthentication(type);
+            var authService = _authFactory.CreateAuthentication();
             var token = await authService.GetTokenAsync();
 
-            var gateway = _gatewayFactory.CreateGateway(type);
+            var gateway = _gatewayFactory.CreateGateway();
             return await gateway.ProcessPayment(amount, currency, orderId, customerId, token);
         }
 

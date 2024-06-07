@@ -13,10 +13,10 @@ namespace Infrastructure.Adapters.PaymentGateway
         private readonly string _apiBaseUrl;
         private readonly string _sellerId;
 
-        public GetNetAdapter(HttpClient httpClient, string apiBaseUrl, IConfiguration configuration)
+        public GetNetAdapter(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _apiBaseUrl = apiBaseUrl;
+            _apiBaseUrl = configuration["PaymentApiSettings:GetNet:BaseUrl"];
             _sellerId = configuration["PaymentApiSettings:GetNet:SellerId"];
         }
 

@@ -11,14 +11,15 @@ namespace Infrastructure.Factories
         {
             _configuration = configuration;
         }
-        public IPaymentGateway CreateGateway(string gatewayType)
+        public IPaymentGateway CreateGateway()
         {
+            var gatewayType = _configuration["PaymentService:GatewayType"];
             switch (gatewayType)
             {
                 case "GetNet":
-                    return new GetNetAdapter(new HttpClient(), "https://api.getnet.com.br/v1/", _configuration);
+                    return new GetNetAdapter(new HttpClient(), _configuration);
                 case "PixFast":
-                    return new GetNetAdapter(new HttpClient(), "https://api.pixfast.com.br", _configuration);
+                    return new GetNetAdapter(new HttpClient(), _configuration);
                 default:
                     throw new ArgumentException("Unsupported gateway type");
             }

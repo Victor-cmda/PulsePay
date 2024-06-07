@@ -2,6 +2,6 @@
 {
     public interface IPaymentGatewayFactory
     {
-        IPaymentGateway CreateGateway(string type);
+        IPaymentGateway CreateGateway();
     }
 }

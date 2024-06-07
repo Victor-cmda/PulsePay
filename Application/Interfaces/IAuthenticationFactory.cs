@@ -2,6 +2,6 @@
 {
     public interface IAuthenticationFactory
     {
-        IAuthenticationPaymentApiService CreateAuthentication(string type);
+        IAuthenticationPaymentApiService CreateAuthentication();
     }
 }
