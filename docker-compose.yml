@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    image: pulsepay:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__PostgresDatabase=Host=db;Database=base;Username=base;Password=12345
+      - Jwt__Key=T3JKZ5ZEj4-AgKNvjAxzb-qIhDGGWaVGUqmQVlLaWOI
+      - Jwt__Issuer=https://localhost:5001
+      - Jwt__Audience=https://localhost:5001
+    ports:
+      - "80:80"  # Mapeia a porta 80 externa para a porta 80 interna do contêiner
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: base
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: base
+    ports:
+      - "5432:5432"

@@ -12,12 +12,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// Configuração do Kestrel para ler as configurações do appsettings.json
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
+});
 
 // Configuração do JWT
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 var key = Encoding.ASCII.GetBytes(jwtConfig.Key);
-
 
 builder.Services.AddAuthentication(options =>
 {
@@ -47,7 +50,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim("TokenType", "Client"));
 });
 
-// Add services to the container.
+// Adicionando CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("OpenCorsPolicy", policy =>
@@ -59,13 +62,13 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+// Configuração do Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "PulsePay API", Version = "v1" });
 
-    // Configurando o Bearer Token
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -97,13 +100,10 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresDatabase")));
 
-// Registro de servicos de cache
+// Registro de serviços de cache
 builder.Services.AddMemoryCache();
 
-// Registro de repositorios
-
-// Registro de servicos
-//builder.Services.AddScoped<IUserService, UserService>();
+// Registro de serviços
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
 
@@ -111,23 +111,24 @@ builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticatio
 builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
-
-// Registro de servicos de integracao com APIs - Autenticacao
+// Registro de serviços de integração com APIs - Autenticação
 builder.Services.AddHttpClient<GetNetAuthenticationService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Configuração do pipeline de requisições HTTP
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "PulsePay API v1");
+    c.RoutePrefix = string.Empty; // Isso define o Swagger na raiz
+});
 
 app.UseHttpsRedirection();
 
 app.UseCors("OpenCorsPolicy");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
