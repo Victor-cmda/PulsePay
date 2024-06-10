@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.DTOs.BankSlip;
+using Application.Interfaces;
 using Domain.Entities.GetNet.Pix;
 using Domain.Interfaces;
 
@@ -21,7 +22,16 @@ namespace Application.Services
             var token = await authService.GetTokenAsync();
 
             var gateway = _gatewayFactory.CreateGateway();
-            return await gateway.ProcessPayment(amount, currency, orderId, customerId, token);
+            return await gateway.ProcessPixPayment(amount, currency, orderId, customerId, token);
+        }
+
+        public async Task<PaymentResponse> GenerateBoletoPayment(PaymentBankSlipRequestDto paymentRequest)
+        {
+            var authService = _authFactory.CreateAuthentication();
+            var token = await authService.GetTokenAsync();
+
+            var gateway = _gatewayFactory.CreateGateway();
+            return await gateway.ProcessBoletoPayment(paymentRequest, token);
         }
 
     }

@@ -4,6 +4,7 @@ using Domain.Entities.GetNet.Pix;
 using System.Net.Http.Json;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Application.DTOs.BankSlip;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -20,7 +21,7 @@ namespace Infrastructure.Adapters.PaymentGateway
             _sellerId = configuration["PaymentApiSettings:GetNet:SellerId"];
         }
 
-        public async Task<PaymentResponse> ProcessPayment(decimal amount, string currency, string orderId, string customerId, string authToken)
+        public async Task<PaymentResponse> ProcessPixPayment(decimal amount, string currency, string orderId, string customerId, string authToken)
         {
             var paymentRequest = new PaymentRequest
             {
@@ -53,6 +54,28 @@ namespace Infrastructure.Adapters.PaymentGateway
                 description = paymentResponse.description,
                 additional_data = paymentResponse.additional_data
             };
+        }
+
+        public async Task<PaymentResponse> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, string authToken)
+        {
+            ConfigureHttpClientHeaders(authToken);
+
+            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/boleto", paymentRequest);
+            if (!response.IsSuccessStatusCode)
+            {
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("Erro na resposta: " + responseContent);
+
+                var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                var responseString = Encoding.UTF8.GetString(responseBytes);
+                Console.WriteLine("Erro na resposta: " + responseString);
+
+                throw new Exception("Falha ao processar pagamento PIX.");
+            }
+            response.EnsureSuccessStatusCode();
+            var paymentResponse = await response.Content.ReadFromJsonAsync<PaymentResponse>();
+
+            return paymentResponse;
         }
 
         private void ConfigureHttpClientHeaders(string authToken)
