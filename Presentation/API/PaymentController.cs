@@ -18,7 +18,7 @@ namespace Presentation.API
 
         [Authorize(Policy = "ClientPolicy")]
         [HttpPost("pix")]
-        public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentRequestDto paymentRequest)
+        public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentPixRequestDto paymentRequest)
         {
             try
             {
