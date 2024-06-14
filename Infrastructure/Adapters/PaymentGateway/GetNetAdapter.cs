@@ -4,6 +4,8 @@ using Domain.Entities.GetNet.Pix;
 using System.Net.Http.Json;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Application.DTOs.BankSlip;
+using Application.DTOs.Pix;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -13,23 +15,15 @@ namespace Infrastructure.Adapters.PaymentGateway
         private readonly string _apiBaseUrl;
         private readonly string _sellerId;
 
-        public GetNetAdapter(HttpClient httpClient, string apiBaseUrl, IConfiguration configuration)
+        public GetNetAdapter(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _apiBaseUrl = apiBaseUrl;
+            _apiBaseUrl = configuration["PaymentApiSettings:GetNet:BaseUrl"];
             _sellerId = configuration["PaymentApiSettings:GetNet:SellerId"];
         }
 
-        public async Task<PaymentResponse> ProcessPayment(decimal amount, string currency, string orderId, string customerId, string authToken)
+        public async Task<PaymentResponse> ProcessPixPayment(PaymentPixRequestDto paymentRequest, string authToken)
         {
-            var paymentRequest = new PaymentRequest
-            {
-                amount = amount,
-                currency = currency,
-                order_id = orderId,
-                customer_id = customerId
-            };
-
              ConfigureHttpClientHeaders(authToken);
 
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", paymentRequest);
@@ -53,6 +47,28 @@ namespace Infrastructure.Adapters.PaymentGateway
                 description = paymentResponse.description,
                 additional_data = paymentResponse.additional_data
             };
+        }
+
+        public async Task<PaymentResponse> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, string authToken)
+        {
+            ConfigureHttpClientHeaders(authToken);
+
+            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/boleto", paymentRequest);
+            if (!response.IsSuccessStatusCode)
+            {
+                string responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("Erro na resposta: " + responseContent);
+
+                var responseBytes = await response.Content.ReadAsByteArrayAsync();
+                var responseString = Encoding.UTF8.GetString(responseBytes);
+                Console.WriteLine("Erro na resposta: " + responseString);
+
+                throw new Exception("Falha ao processar pagamento PIX.");
+            }
+            response.EnsureSuccessStatusCode();
+            var paymentResponse = await response.Content.ReadFromJsonAsync<PaymentResponse>();
+
+            return paymentResponse;
         }
 
         private void ConfigureHttpClientHeaders(string authToken)

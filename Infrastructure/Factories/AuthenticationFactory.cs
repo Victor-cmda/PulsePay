@@ -1,5 +1,4 @@
 ﻿using Application.Interfaces;
-using Application.Interfaces.Application.Interfaces;
 using Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,16 +16,17 @@ namespace Infrastructure.Factories
             _configuration = configuration;
         }
 
-        public IAuthenticationPaymentApiService CreateAuthentication(string serviceType)
+        public IAuthenticationPaymentApiService CreateAuthentication()
         {
-            switch (serviceType)
+            var gatewayType = _configuration["PaymentService:GatewayType"];
+            switch (gatewayType)
             {
                 case "GetNet":
                     return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
                 case "Sicredi":
                     return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
                 default:
-                    throw new ArgumentException("Unsupported service type", nameof(serviceType));
+                    throw new ArgumentException("Unsupported service type", nameof(gatewayType));
             }
         }
     }

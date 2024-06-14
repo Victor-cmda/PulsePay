@@ -1,31 +1,47 @@
-﻿using Application.DTOs;
+﻿using Application.DTOs.BankSlip;
+using Application.DTOs.Pix;
 using Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.API
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/payment")]
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
-
-        public PaymentsController(IPaymentService paymentService)
+        private readonly ILogger<PaymentsController> _logger;
+        public PaymentsController(IPaymentService paymentService, ILogger<PaymentsController> logger)
         {
             _paymentService = paymentService;
+            _logger = logger;
         }
 
-        [HttpPost("process")]
-        public async Task<IActionResult> ProcessPayment([FromBody] PaymentRequestDto paymentRequest)
+        [Authorize(Policy = "ClientPolicy")]
+        [HttpPost("pix")]
+        public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentPixRequestDto paymentRequest)
         {
             try
             {
-                var response = await _paymentService.ProcessPayment(
-                    paymentRequest.Type,
-                    paymentRequest.Amount,
-                    paymentRequest.Currency,
-                    paymentRequest.OrderId,
-                    paymentRequest.CustomerId);
+                _logger.LogInformation("Pix Payment request log");
+                var response = await _paymentService.GeneratePixPayment(paymentRequest);
+
+                return Ok(new { Message = "Pagamento processado com sucesso", Details = response });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = "ClientPolicy")]
+        [HttpPost("boleto")]
+        public async Task<IActionResult> GenerateBoletoPayment([FromBody] PaymentBankSlipRequestDto paymentRequest)
+        {
+            try
+            {
+                var response = await _paymentService.GenerateBoletoPayment(paymentRequest);
 
                 return Ok(new { Message = "Pagamento processado com sucesso", Details = response });
             }
