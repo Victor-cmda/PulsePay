@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Application.DTOs.BankSlip;
+using Application.DTOs.Pix;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -21,16 +22,8 @@ namespace Infrastructure.Adapters.PaymentGateway
             _sellerId = configuration["PaymentApiSettings:GetNet:SellerId"];
         }
 
-        public async Task<PaymentResponse> ProcessPixPayment(decimal amount, string currency, string orderId, string customerId, string authToken)
+        public async Task<PaymentResponse> ProcessPixPayment(PaymentPixRequestDto paymentRequest, string authToken)
         {
-            var paymentRequest = new PaymentRequest
-            {
-                amount = amount,
-                currency = currency,
-                order_id = orderId,
-                customer_id = customerId
-            };
-
              ConfigureHttpClientHeaders(authToken);
 
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", paymentRequest);

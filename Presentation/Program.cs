@@ -9,16 +9,27 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Presentation.Configuration;
 using System.Text;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuração do Kestrel para ler as configurações do appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: "logs/log-.txt",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: null,
+        fileSizeLimitBytes: null,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
 });
 
-// Configuração do JWT
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 var key = Encoding.ASCII.GetBytes(jwtConfig.Key);
 
@@ -50,7 +61,6 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim("TokenType", "Client"));
 });
 
-// Adicionando CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("OpenCorsPolicy", policy =>
@@ -63,7 +73,6 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 
-// Configuração do Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -100,28 +109,23 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresDatabase")));
 
-// Registro de serviços de cache
 builder.Services.AddMemoryCache();
 
-// Registro de serviços
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
 
-// Registro de factories
 builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
-// Registro de serviços de integração com APIs - Autenticação
 builder.Services.AddHttpClient<GetNetAuthenticationService>();
 
 var app = builder.Build();
 
-// Configuração do pipeline de requisições HTTP
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "PulsePay API v1");
-    c.RoutePrefix = string.Empty; // Isso define o Swagger na raiz
+    c.RoutePrefix = string.Empty;
 });
 
 app.UseHttpsRedirection();

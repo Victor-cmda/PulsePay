@@ -11,10 +11,11 @@ namespace Presentation.API
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
-
-        public PaymentsController(IPaymentService paymentService)
+        private readonly ILogger<PaymentsController> _logger;
+        public PaymentsController(IPaymentService paymentService, ILogger<PaymentsController> logger)
         {
             _paymentService = paymentService;
+            _logger = logger;
         }
 
         [Authorize(Policy = "ClientPolicy")]
@@ -23,11 +24,8 @@ namespace Presentation.API
         {
             try
             {
-                var response = await _paymentService.GeneratePixPayment(
-                    paymentRequest.Amount,
-                    paymentRequest.Currency,
-                    paymentRequest.OrderId,
-                    paymentRequest.CustomerId);
+                _logger.LogInformation("Pix Payment request log");
+                var response = await _paymentService.GeneratePixPayment(paymentRequest);
 
                 return Ok(new { Message = "Pagamento processado com sucesso", Details = response });
             }
@@ -43,13 +41,7 @@ namespace Presentation.API
         {
             try
             {
-                var response = await _paymentService.GeneratePayment(
-                    paymentRequest.SellerId,
-                    paymentRequest.Amount,
-                    paymentRequest.Currency,
-                    paymentRequest.Order,
-                    paymentRequest.Boleto,
-                    paymentRequest.Customer);
+                var response = await _paymentService.GenerateBoletoPayment(paymentRequest);
 
                 return Ok(new { Message = "Pagamento processado com sucesso", Details = response });
             }

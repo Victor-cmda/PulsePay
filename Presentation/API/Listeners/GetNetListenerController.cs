@@ -90,7 +90,7 @@ namespace Presentation.API
             [FromQuery] string error_code,
             [FromQuery] string description_detail)
         {
-            Console.WriteLine($"Notificação de Boleto Recebida: {payment_type}, {order_id}, {payment_id}, {id}, {amount}, {status}, {bank}, {our_number}, {typeful_line}, {issue_date}, {expiration_date}, {error_code}, {description_detail}");
+             Console.WriteLine($"Notificação de Boleto Recebida: {payment_type}, {order_id}, {payment_id}, {id}, {amount}, {status}, {bank}, {our_number}, {typeful_line}, {issue_date}, {expiration_date}, {error_code}, {description_detail}");
 
             return Ok();
         }
