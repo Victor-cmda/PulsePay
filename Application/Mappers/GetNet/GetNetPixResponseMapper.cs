@@ -1,0 +1,23 @@
+﻿using Application.DTOs.Pix;
+using Domain.Entities.GetNet.Pix;
+
+namespace Application.Mappers.GetNet
+{
+    public class GetNetPixResponseMapper : IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>
+    {
+        public PaymentPixResponseDto Map(GetNetPixResponse response)
+        {
+            return new PaymentPixResponseDto
+            {
+                //PaymentId = response.payment_id,
+                //Status = response.status,
+                //Description = response.description,
+                //TransactionId = response.additional_data.transaction_id,
+                //QrCode = response.additional_data.qr_code,
+                //CreationDateQrCode = response.additional_data.creation_date_qrcode,
+                //ExpirationDateQrCode = response.additional_data.expiration_date_qrcode,
+                //PspCode = response.additional_data.psp_code
+            };
+        }
+    }
+}

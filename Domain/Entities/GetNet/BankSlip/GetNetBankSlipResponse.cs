@@ -1,6 +1,6 @@
-﻿namespace Application.DTOs.BankSlip
+﻿namespace Domain.Entities.GetNet.BankSlip
 {
-    public class PaymentBankSlipResponseDto
+    public class GetNetBankSlipResponse
     {
         public string Status { get; set; }
         public string ErrorMessage { get; set; }

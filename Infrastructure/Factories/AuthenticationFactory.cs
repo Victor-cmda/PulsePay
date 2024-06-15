@@ -16,18 +16,35 @@ namespace Infrastructure.Factories
             _configuration = configuration;
         }
 
-        public IAuthenticationPaymentApiService CreateAuthentication()
+        public IAuthenticationPaymentApiService CreateAuthentication(string requestType)
         {
-            var gatewayType = _configuration["PaymentService:GatewayType"];
+            var gatewayType = GetPaymentTypeRequest(requestType);
             switch (gatewayType)
             {
                 case "GetNet":
                     return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
-                case "Sicredi":
+                case "K8Pay":
                     return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
                 default:
                     throw new ArgumentException("Unsupported service type", nameof(gatewayType));
             }
+        }
+
+        private string GetPaymentTypeRequest(string requestType)
+        {
+            string result;
+            switch (requestType)
+            {
+                case "Pix":
+                    result = _configuration["PaymentService:Pix:GatewayType"];
+                    break;
+                case "BankSlip":
+                    result = _configuration["PaymentService:BankSlip:GatewayType"];
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported service type", nameof(requestType));
+            }
+            return result;
         }
     }
 }

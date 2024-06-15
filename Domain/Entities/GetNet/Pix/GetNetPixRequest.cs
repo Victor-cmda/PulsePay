@@ -1,6 +1,6 @@
 ﻿namespace Domain.Entities.GetNet.Pix
 {
-    public class PaymentRequest
+    public class GetNetPixRequest
     {
         public decimal amount { get; set; }
         public string currency { get; set; }

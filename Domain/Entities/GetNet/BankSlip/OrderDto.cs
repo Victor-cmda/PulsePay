@@ -1,4 +1,4 @@
-﻿namespace Application.DTOs.BankSlip
+﻿namespace Domain.Entities.GetNet.BankSlip
 {
     public class OrderDto
     {

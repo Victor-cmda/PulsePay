@@ -10,6 +10,10 @@ using Microsoft.OpenApi.Models;
 using Presentation.Configuration;
 using System.Text;
 using Serilog;
+using Application.DTOs.Pix;
+using Domain.Entities.GetNet.Pix;
+using Application.Mappers;
+using Application.Mappers.GetNet;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -118,6 +122,9 @@ builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
 builder.Services.AddHttpClient<GetNetAuthenticationService>();
+
+
+builder.Services.AddTransient<IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>, GetNetPixResponseMapper>();
 
 var app = builder.Build();
 

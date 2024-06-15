@@ -24,7 +24,7 @@ namespace Presentation.API
         {
             try
             {
-                _logger.LogInformation("Pix Payment request log");
+                _logger.LogInformation("Payment request by bank slip");
                 var response = await _paymentService.GeneratePixPayment(paymentRequest);
 
                 return Ok(new { Message = "Pagamento processado com sucesso", Details = response });
@@ -41,6 +41,7 @@ namespace Presentation.API
         {
             try
             {
+                _logger.LogInformation("Payment request by pix");
                 var response = await _paymentService.GenerateBoletoPayment(paymentRequest);
 
                 return Ok(new { Message = "Pagamento processado com sucesso", Details = response });
