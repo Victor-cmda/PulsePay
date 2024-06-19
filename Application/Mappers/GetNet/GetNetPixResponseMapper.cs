@@ -9,14 +9,12 @@ namespace Application.Mappers.GetNet
         {
             return new PaymentPixResponseDto
             {
-                //PaymentId = response.payment_id,
-                //Status = response.status,
-                //Description = response.description,
-                //TransactionId = response.additional_data.transaction_id,
-                //QrCode = response.additional_data.qr_code,
-                //CreationDateQrCode = response.additional_data.creation_date_qrcode,
-                //ExpirationDateQrCode = response.additional_data.expiration_date_qrcode,
-                //PspCode = response.additional_data.psp_code
+                PaymentId = response.payment_id,
+                Status = response.status,
+                Description = response.description,
+                TransactionId = response.additional_data.transaction_id,
+                QrCode = response.additional_data.qr_code,
+                ExpirationQrCode = response.additional_data.creation_date_qrcode,
             };
         }
     }

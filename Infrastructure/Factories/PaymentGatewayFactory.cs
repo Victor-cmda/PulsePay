@@ -9,9 +9,10 @@ namespace Infrastructure.Factories
     {
         private readonly IConfiguration _configuration;
         private readonly IServiceProvider _serviceProvider;
-        public PaymentGatewayFactory(IConfiguration configuration)
+        public PaymentGatewayFactory(IConfiguration configuration, IServiceProvider serviceProvider)
         {
             _configuration = configuration;
+            _serviceProvider = serviceProvider;
         }
         public IPaymentGateway CreateGateway(string requestType)
         {

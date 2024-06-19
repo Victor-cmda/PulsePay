@@ -18,7 +18,7 @@ namespace Presentation.API
             _logger = logger;
         }
 
-        [Authorize(Policy = "ClientPolicy")]
+        //[Authorize(Policy = "ClientPolicy")]
         [HttpPost("pix")]
         public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentPixRequestDto paymentRequest)
         {

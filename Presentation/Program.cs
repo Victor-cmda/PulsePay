@@ -14,6 +14,11 @@ using Application.DTOs.Pix;
 using Domain.Entities.GetNet.Pix;
 using Application.Mappers;
 using Application.Mappers.GetNet;
+using Infrastructure.Adapters.PaymentGateway;
+using Infrastructure.Repositories;
+using Domain.Entities.K8Pay.BankSlip;
+using Application.DTOs.BankSlip;
+using Application.Mappers.K8Pay;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -115,16 +120,37 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMemoryCache();
 
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
 
+builder.Services.AddTransient<ITransactionRepository, TransactionRepository>();
+
+builder.Services.AddTransient<ITransactionService, TransactionService>();
+
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
+builder.Services.AddScoped<IAuthenticationPaymentApiService, K8PayAuthenticationService>();
+
+
+builder.Services.AddHttpClient<GetNetAuthenticationService>();
+builder.Services.AddHttpClient<K8PayAuthenticationService>();
+
+// Register mappers
+//GetNet
+builder.Services.AddTransient<IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>, GetNetPixResponseMapper>();
+//K8Pay
+builder.Services.AddTransient<IResponseMapper<K8PayBankSlipResponse, PaymentBankSlipResponseDto>, K8PayBankSlipResponseMapper>();
+
+
+builder.Services.AddSingleton<IResponseMapperFactory, ResponseMapperFactory>();
+
+// Register adapters
+builder.Services.AddTransient<GetNetAdapter>();
+builder.Services.AddTransient<K8PayAdapter>();
+
+// Register Factories
 builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
-builder.Services.AddHttpClient<GetNetAuthenticationService>();
-
-
-builder.Services.AddTransient<IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>, GetNetPixResponseMapper>();
 
 var app = builder.Build();
 
@@ -132,7 +158,6 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "PulsePay API v1");
-    c.RoutePrefix = string.Empty;
 });
 
 app.UseHttpsRedirection();

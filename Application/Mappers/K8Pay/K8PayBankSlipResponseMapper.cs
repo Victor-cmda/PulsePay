@@ -3,9 +3,9 @@ using Domain.Entities.K8Pay.BankSlip;
 
 namespace Application.Mappers.K8Pay
 {
-    public class K8PayBankSlipResponseMapper : IResponseMapper<Domain.Entities.K8Pay.BankSlip.K8PayBankSlipResponse, PaymentBankSlipResponseDto>
+    public class K8PayBankSlipResponseMapper : IResponseMapper<K8PayBankSlipResponse, PaymentBankSlipResponseDto>
     {
-        public PaymentBankSlipResponseDto Map(Domain.Entities.K8Pay.BankSlip.K8PayBankSlipResponse response)
+        public PaymentBankSlipResponseDto Map(K8PayBankSlipResponse response)
         {
             return new PaymentBankSlipResponseDto
             {

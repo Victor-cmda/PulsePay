@@ -1,13 +1,12 @@
-﻿using System.Net.Http.Headers;
+﻿using Application.DTOs.BankSlip;
+using Application.DTOs.Pix;
 using Application.Interfaces;
 using Domain.Entities.GetNet.Pix;
-using System.Net.Http.Json;
-using System.Text;
+using Domain.Models;
 using Microsoft.Extensions.Configuration;
-using Application.DTOs.BankSlip;
-using Application.DTOs.Pix;
-using Application.Mappers;
-using Infrastructure.Factories;
+using Newtonsoft.Json.Linq;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -17,13 +16,16 @@ namespace Infrastructure.Adapters.PaymentGateway
         private readonly string _apiBaseUrl;
         private readonly string _sellerId;
         private readonly IResponseMapperFactory _responseMapperFactory;
+        private readonly ITransactionService _transactionService;
 
-        public GetNetAdapter(HttpClient httpClient, IConfiguration configuration, IResponseMapperFactory responseMapperFactory)
+
+        public GetNetAdapter(HttpClient httpClient, IConfiguration configuration, IResponseMapperFactory responseMapperFactory, ITransactionService transactionService)
         {
             _httpClient = httpClient;
             _apiBaseUrl = configuration["PaymentApiSettings:GetNet:BaseUrl"];
             _sellerId = configuration["PaymentApiSettings:GetNet:SellerId"];
             _responseMapperFactory = responseMapperFactory;
+            _transactionService = transactionService;
         }
 
         public async Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, string authToken)
@@ -31,21 +33,36 @@ namespace Infrastructure.Adapters.PaymentGateway
             ConfigureHttpClientHeaders(authToken);
 
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", paymentRequest);
+            var jsonResponseString = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
-                string responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine("Erro na resposta: " + responseContent);
-
-                var responseBytes = await response.Content.ReadAsByteArrayAsync();
-                var responseString = Encoding.UTF8.GetString(responseBytes);
-                Console.WriteLine("Erro na resposta: " + responseString);
-
+                Console.WriteLine($"Erro na resposta: {jsonResponseString}");
                 throw new Exception("Falha ao processar pagamento PIX.");
             }
 
-            var paymentResponse = await response.Content.ReadFromJsonAsync<GetNetPixResponse>();
+            var paymentResponse = await Task.Run(() => Newtonsoft.Json.JsonConvert.DeserializeObject<GetNetPixResponse>(jsonResponseString));
             var mapper = _responseMapperFactory.CreateMapper<GetNetPixResponse, PaymentPixResponseDto>();
-            return mapper.Map(paymentResponse);
+            var result = mapper.Map(paymentResponse);
+
+            var jsonResponseObject = JObject.Parse(jsonResponseString);
+
+            var transaction = new Transaction
+            {
+                TransactionId = result.TransactionId,
+                Amount = result.Amount,
+                PaymentType = "Pix",
+                Status = result.Status,
+                CreatedAt = DateTime.Now,
+                Details = jsonResponseObject,
+                DocumentType = paymentRequest.DocumentType,
+                DocumentCustomer = paymentRequest.Document,
+                EmailCustumer = paymentRequest.Email,
+                NameCustumer = paymentRequest.Name
+            };
+
+            await _transactionService.CreateTransactionAsync(transaction);
+
+            return result;
         }
 
         public async Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, string authToken)
