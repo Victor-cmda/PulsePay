@@ -7,8 +7,8 @@ namespace Application.Interfaces
 {
     public interface IPaymentGateway
     {
-        Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, string authToken);
-        Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, string authToken);
+        Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId, string authToken);
+        Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId, string authToken);
 
     }
 }

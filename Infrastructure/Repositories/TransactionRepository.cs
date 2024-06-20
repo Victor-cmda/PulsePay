@@ -15,9 +15,16 @@ namespace Infrastructure.Repositories
         }
         public async Task<Transaction> AddAsync(Transaction transaction)
         {
-            await _context.Set<Transaction>().AddAsync(transaction);
-            await _context.SaveChangesAsync();
-            return transaction;
+            try
+            {
+                await _context.Set<Transaction>().AddAsync(transaction);
+                await _context.SaveChangesAsync();
+                return transaction;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error saving transaction: {ex.InnerException?.Message}", ex);
+            }
         }
 
         public async Task<Transaction> UpdateAsync(Transaction transaction)

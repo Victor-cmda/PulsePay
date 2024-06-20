@@ -30,6 +30,8 @@ namespace Domain.Models
         [Column(TypeName = "decimal(10,2)")]
         public decimal Amount { get; set; }
         public DateTime CreatedAt { get; set; }
+        [Required]
+        public Guid SellerId { get; set; }
         [StringLength(20)]
         public string Status { get; set; }
         public JObject Details { get; set; }

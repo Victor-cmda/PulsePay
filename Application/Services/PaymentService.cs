@@ -17,20 +17,20 @@ namespace Application.Services
             _authFactory = authFactory;
         }
 
-        public async Task<PaymentPixResponseDto> GeneratePixPayment(PaymentPixRequestDto paymentRequest)
+        public async Task<PaymentPixResponseDto> GeneratePixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId)
         {
             var authService = _authFactory.CreateAuthentication("Pix");
             var token = await authService.GetTokenAsync();
             var gateway = _gatewayFactory.CreateGateway("Pix");
-            return await gateway.ProcessPixPayment(paymentRequest, token);
+            return await gateway.ProcessPixPayment(paymentRequest, sellerId, token);
         }
 
-        public async Task<PaymentBankSlipResponseDto> GenerateBoletoPayment(PaymentBankSlipRequestDto paymentRequest)
+        public async Task<PaymentBankSlipResponseDto> GenerateBoletoPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId)
         {
             var authService = _authFactory.CreateAuthentication("BankSlip");
             var token = await authService.GetTokenAsync();
             var gateway = _gatewayFactory.CreateGateway("BankSlip");
-            return await gateway.ProcessBankSlipPayment(paymentRequest, token);
+            return await gateway.ProcessBankSlipPayment(paymentRequest, sellerId, token);
         }
 
     }

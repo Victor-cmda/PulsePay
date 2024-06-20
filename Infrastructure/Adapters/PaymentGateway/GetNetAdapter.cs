@@ -28,7 +28,7 @@ namespace Infrastructure.Adapters.PaymentGateway
             _transactionService = transactionService;
         }
 
-        public async Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, string authToken)
+        public async Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             ConfigureHttpClientHeaders(authToken);
 
@@ -49,15 +49,16 @@ namespace Infrastructure.Adapters.PaymentGateway
             var transaction = new Transaction
             {
                 TransactionId = result.TransactionId,
-                Amount = result.Amount,
-                PaymentType = "Pix",
+                Amount = paymentRequest.Amount,
+                PaymentType = "PIX",
                 Status = result.Status,
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.DocumentType,
                 DocumentCustomer = paymentRequest.Document,
                 EmailCustumer = paymentRequest.Email,
-                NameCustumer = paymentRequest.Name
+                NameCustumer = paymentRequest.Name,
+                SellerId = sellerId
             };
 
             await _transactionService.CreateTransactionAsync(transaction);
@@ -65,7 +66,7 @@ namespace Infrastructure.Adapters.PaymentGateway
             return result;
         }
 
-        public async Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, string authToken)
+        public async Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             throw new NotImplementedException();
         }

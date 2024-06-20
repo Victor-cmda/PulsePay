@@ -6,8 +6,8 @@ namespace Domain.Interfaces
 {
     public interface IPaymentService
     {
-        Task<PaymentPixResponseDto> GeneratePixPayment(PaymentPixRequestDto paymentRequest);
-        Task<PaymentBankSlipResponseDto> GenerateBoletoPayment(PaymentBankSlipRequestDto paymentRequest);
+        Task<PaymentPixResponseDto> GeneratePixPayment(PaymentPixRequestDto paymentRequest, Guid SellerId);
+        Task<PaymentBankSlipResponseDto> GenerateBoletoPayment(PaymentBankSlipRequestDto paymentRequest, Guid SellerId);
 
     }
 }

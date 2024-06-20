@@ -19,6 +19,7 @@ using Infrastructure.Repositories;
 using Domain.Entities.K8Pay.BankSlip;
 using Application.DTOs.BankSlip;
 using Application.Mappers.K8Pay;
+using Presentation.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 

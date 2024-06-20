@@ -18,12 +18,12 @@ namespace Infrastructure.Adapters.PaymentGateway
             _sellerId = configuration["PaymentApiSettings:K8Pay:SellerId"];
         }
 
-        public Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, string authToken)
+        public Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             throw new NotImplementedException();
         }
 
-        public Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, string authToken)
+        public Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             throw new NotImplementedException();
         }
