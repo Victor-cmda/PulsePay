@@ -2,13 +2,9 @@
 {
     public class PaymentBankSlipResponseDto
     {
-        public string Status { get; set; }
-        public string ErrorMessage { get; set; }
-        public string Identifier { get; set; }
-        public string OurNumber { get; set; }
-        public string DigitableLine { get; set; }
-        public string Barcode { get; set; }
-        public string Pdf { get; set; }
-        public string ErrorCode { get; set; }
+        public string OrderId { get; set; }
+        public string TypefulLine { get; set; }
+        public string BarCode { get; set; }
+        public string HrefPdf { get; set; }
     }
 }

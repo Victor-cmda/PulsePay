@@ -1,7 +1,7 @@
 ﻿using Application.DTOs.Pix;
 using Domain.Entities.GetNet.Pix;
 
-namespace Application.Mappers.GetNet
+namespace Application.Mappers.GetNet.Pix
 {
     public class GetNetPixResponseMapper : IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>
     {

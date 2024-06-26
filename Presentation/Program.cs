@@ -13,13 +13,13 @@ using Serilog;
 using Application.DTOs.Pix;
 using Domain.Entities.GetNet.Pix;
 using Application.Mappers;
-using Application.Mappers.GetNet;
 using Infrastructure.Adapters.PaymentGateway;
 using Infrastructure.Repositories;
 using Domain.Entities.K8Pay.BankSlip;
 using Application.DTOs.BankSlip;
+using Application.Mappers.K8Pay.BankSlip;
 using Application.Mappers.K8Pay;
-using Presentation.Middleware;
+using Application.Mappers.GetNet.Pix;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -138,8 +138,10 @@ builder.Services.AddHttpClient<K8PayAuthenticationService>();
 // Register mappers
 //GetNet
 builder.Services.AddTransient<IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>, GetNetPixResponseMapper>();
+builder.Services.AddTransient<IResponseMapper<PaymentPixRequestDto, GetNetPixRequest>, GetNetPixRequestMapper>();
 //K8Pay
 builder.Services.AddTransient<IResponseMapper<K8PayBankSlipResponse, PaymentBankSlipResponseDto>, K8PayBankSlipResponseMapper>();
+builder.Services.AddTransient<IResponseMapper<PaymentBankSlipRequestDto, K8PayBankSlipRequest>, K8PayBankSlipRequestMapper>();
 
 
 builder.Services.AddSingleton<IResponseMapperFactory, ResponseMapperFactory>();
