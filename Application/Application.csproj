@@ -16,4 +16,9 @@
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Mappers\GetNet\BankSlip\" />
+    <Folder Include="Mappers\K8Pay\Pix\" />
+  </ItemGroup>
+
 </Project>

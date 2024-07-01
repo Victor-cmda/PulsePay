@@ -2,7 +2,10 @@
 {
     public class PaymentBankSlipResponseDto
     {
-        public string PaymentId { get; set; }
-        public string Status { get; set; }
+        public Guid Id { get; set; }
+        public string OrderId { get; set; }
+        public string TypefulLine { get; set; }
+        public string BarCode { get; set; }
+        public string HrefPdf { get; set; }
     }
 }

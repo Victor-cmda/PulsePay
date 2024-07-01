@@ -1,6 +1,6 @@
 ﻿namespace Domain.Entities.GetNet.Pix
 {
-    public class PaymentResponse
+    public class GetNetPixResponse
     {
         public string payment_id { get; set; }
         public string status { get; set; }

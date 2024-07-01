@@ -6,22 +6,22 @@ using System.Text.Json;
 
 namespace Application.Services
 {
-    public class GetNetAuthenticationService : IAuthenticationPaymentApiService
+    public class K8PayAuthenticationService : IAuthenticationPaymentApiService
     {
         private readonly HttpClient _httpClient;
         private readonly string _clientId;
         private readonly string _clientSecret;
         private readonly string _baseUrl;
         private readonly IMemoryCache _memoryCache;
-        private const string TokenCacheKey = "GetNetAuthToken";
+        private const string TokenCacheKey = "K8PayAuthToken";
 
-        public GetNetAuthenticationService(HttpClient httpClient, IConfiguration configuration, IMemoryCache memoryCache)
+        public K8PayAuthenticationService(HttpClient httpClient, IConfiguration configuration, IMemoryCache memoryCache)
         {
             _httpClient = httpClient;
             _memoryCache = memoryCache;
-            _clientId = configuration["PaymentApiSettings:GetNet:ClientId"];
-            _clientSecret = configuration["PaymentApiSettings:GetNet:ClientSecret"];
-            _baseUrl = configuration["PaymentApiSettings:GetNet:AuthBasicUrl"];
+            _clientId = configuration["PaymentApiSettings:K8Pay:ClientId"];
+            _clientSecret = configuration["PaymentApiSettings:K8Pay:ClientSecret"];
+            _baseUrl = configuration["PaymentApiSettings:K8Pay:AuthBasicUrl"];
         }
 
         public async Task<string> GetTokenAsync()
@@ -31,16 +31,13 @@ namespace Application.Services
                 return cachedToken;
             }
 
-            string credentials = $"{_clientId}:{_clientSecret}";
-            string encodedCredentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(credentials));
-
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encodedCredentials);
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var requestBody = new FormUrlEncodedContent(new[]
             {
-                new KeyValuePair<string, string>("scope", "oob"),
-                new KeyValuePair<string, string>("grant_type", "client_credentials")
+                new KeyValuePair<string, string>("username", _clientId),
+                new KeyValuePair<string, string>("password", _clientSecret),
+                new KeyValuePair<string, string>("grant_type", "password")
             });
 
             var response = await _httpClient.PostAsync(_baseUrl, requestBody);
@@ -52,5 +49,6 @@ namespace Application.Services
 
             return newToken;
         }
+
     }
 }
