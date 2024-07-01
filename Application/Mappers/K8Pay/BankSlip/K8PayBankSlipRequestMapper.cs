@@ -18,6 +18,12 @@ namespace Application.Mappers.K8Pay
                 ClienteEndereco = $"{response.Customer.BillingAddress.Street}, {response.Customer.BillingAddress.Number}",
                 ClienteUF = response.Customer.BillingAddress.State,
                 ClienteEmail = response.Customer.Email,
+                ClienteDescricao =  $"{response.Customer.Name} - {response.Customer.DocumentNumber}",
+                ClienteIP = "127.0.0.1",
+                DataVencimento = DateTime.Now.AddDays(7),
+                URLConfirmacao = "https://localhost:5001/api/payment/confirm",
+                RetornarBase64 = true,
+                EntradaCNAB = false
             };
         }
     }

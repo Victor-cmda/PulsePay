@@ -9,6 +9,7 @@ namespace Application.Mappers.K8Pay.BankSlip
         {
             return new PaymentBankSlipResponseDto
             {
+                Id = Guid.NewGuid(),
                 OrderId = response.Identificador,
                 TypefulLine = response.LinhaDigitavel,
                 BarCode = response.CodigoBarras,

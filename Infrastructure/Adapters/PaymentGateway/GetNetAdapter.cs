@@ -33,7 +33,7 @@ namespace Infrastructure.Adapters.PaymentGateway
             ConfigureHttpClientHeaders(authToken);
 
             var requestMapped = _responseMapperFactory.CreateMapper<PaymentPixRequestDto, GetNetPixRequest>().Map(paymentRequest);
-            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", paymentRequest);
+            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", requestMapped);
             var jsonResponseString = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
@@ -49,6 +49,7 @@ namespace Infrastructure.Adapters.PaymentGateway
 
             var transaction = new Transaction
             {
+                Id = result.Id,
                 TransactionId = result.TransactionId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "PIX",
@@ -59,7 +60,8 @@ namespace Infrastructure.Adapters.PaymentGateway
                 DocumentCustomer = paymentRequest.Document,
                 EmailCustumer = paymentRequest.Email,
                 NameCustumer = paymentRequest.Name,
-                SellerId = sellerId
+                SellerId = sellerId,
+                GatewayType = "GetNet"
             };
 
             await _transactionService.CreateTransactionAsync(transaction);

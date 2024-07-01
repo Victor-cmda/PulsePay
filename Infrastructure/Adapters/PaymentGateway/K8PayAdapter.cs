@@ -8,6 +8,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Domain.Models;
 using Domain.Entities.K8Pay.BankSlip;
+using System.Security.Cryptography;
+using System.Text;
+using Infrastructure.Services;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -16,16 +19,20 @@ namespace Infrastructure.Adapters.PaymentGateway
         private readonly HttpClient _httpClient;
         private readonly string _apiBaseUrl;
         private readonly string _sellerId;
+        private readonly string _aesKey;
         private readonly IResponseMapperFactory _responseMapperFactory;
         private readonly ITransactionService _transactionService;
+        private readonly FileService _fileService;
 
-        public K8PayAdapter(HttpClient httpClient, IConfiguration configuration, IResponseMapperFactory responseMapperFactory, ITransactionService transactionService)
+        public K8PayAdapter(HttpClient httpClient, IConfiguration configuration, IResponseMapperFactory responseMapperFactory, ITransactionService transactionService, FileService fileService)
         {
             _httpClient = httpClient;
             _apiBaseUrl = configuration["PaymentApiSettings:K8Pay:BaseUrl"];
             _sellerId = configuration["PaymentApiSettings:K8Pay:SellerId"];
+            _aesKey = configuration["PaymentApiSettings:K8Pay:AesKey"];
             _responseMapperFactory = responseMapperFactory;
             _transactionService = transactionService;
+            _fileService = fileService;
         }
 
         public async Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId, string authToken)
@@ -33,7 +40,7 @@ namespace Infrastructure.Adapters.PaymentGateway
             ConfigureHttpClientHeaders(authToken);
 
             var requestMapped = _responseMapperFactory.CreateMapper<PaymentBankSlipRequestDto, K8PayBankSlipRequest>().Map(paymentRequest);
-            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "api/CriaTransacaoBoleto", requestMapped);
+            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "CriaTransacaoBoleto", requestMapped);
             var jsonResponseString = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
@@ -41,25 +48,36 @@ namespace Infrastructure.Adapters.PaymentGateway
                 throw new Exception("Falha ao processar pagamento Boleto.");
             }
 
-            var paymentResponse = await Task.Run(() => Newtonsoft.Json.JsonConvert.DeserializeObject<K8PayBankSlipResponse>(jsonResponseString));
+            var decryptedResponseString = DecryptAES128(jsonResponseString, _aesKey);
+
+            var paymentResponse = await Task.Run(() => Newtonsoft.Json.JsonConvert.DeserializeObject<K8PayBankSlipResponse>(decryptedResponseString));
             var mapper = _responseMapperFactory.CreateMapper<K8PayBankSlipResponse, PaymentBankSlipResponseDto>();
+
+            var jsonResponseObject = JObject.Parse(decryptedResponseString);
+
             var result = mapper.Map(paymentResponse);
 
-            var jsonResponseObject = JObject.Parse(jsonResponseString);
+            string base64Boleto = paymentResponse.BoletoPDF.ToString();
+            string fileName = $"boleto_{result.Id}.pdf";
+            string filePath = await _fileService.SaveBase64AsPdfAsync(base64Boleto, fileName);
+            string downloadLink = $"api/payment/boleto/{result.Id}/pdf";
+            result.HrefPdf = downloadLink;
 
             var transaction = new Transaction
             {
+                Id = result.Id,
                 TransactionId = paymentResponse.Identificador,
                 Amount = paymentRequest.Amount,
                 PaymentType = "BANKSLIP",
-                Status = "PENDING",
+                Status = "Pendente",
                 CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.Customer.DocumentType,
                 DocumentCustomer = paymentRequest.Customer.DocumentNumber,
                 EmailCustumer = paymentRequest.Customer.Email,
                 NameCustumer = paymentRequest.Customer.Email,
-                SellerId = sellerId
+                SellerId = sellerId,
+                GatewayType = "K8Pay"
             };
 
             await _transactionService.CreateTransactionAsync(transaction);
@@ -70,6 +88,32 @@ namespace Infrastructure.Adapters.PaymentGateway
         public async Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             throw new NotImplementedException();
+        }
+
+        private string DecryptAES128(string cipherText, string key)
+        {
+            byte[] iv = new byte[16];
+            byte[] buffer = Convert.FromBase64String(cipherText);
+            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = keyBytes;
+                aes.IV = iv;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Mode = CipherMode.CBC;
+
+                using (MemoryStream memoryStream = new MemoryStream(buffer))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
         }
 
         private void ConfigureHttpClientHeaders(string authToken)

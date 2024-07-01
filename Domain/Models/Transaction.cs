@@ -23,6 +23,9 @@ namespace Domain.Models
         public string DocumentCustomer { get; set; }
         [Required]
         [StringLength(50)]
+        public string GatewayType { get; set; }
+        [Required]
+        [StringLength(50)]
         public string PaymentType { get; set; }
         [Required]
         [StringLength(100)]

@@ -26,8 +26,6 @@ namespace Application.Services
 
         public async Task<string> GetTokenAsync()
         {
-            const string _baseUrl = "https://sandbox.k8bank.com.br/PagamentosApi/token";
-
             if (_memoryCache.TryGetValue(TokenCacheKey, out string cachedToken))
             {
                 return cachedToken;

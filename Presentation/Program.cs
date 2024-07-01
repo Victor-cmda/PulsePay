@@ -20,6 +20,7 @@ using Application.DTOs.BankSlip;
 using Application.Mappers.K8Pay.BankSlip;
 using Application.Mappers.K8Pay;
 using Application.Mappers.GetNet.Pix;
+using Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -121,6 +122,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMemoryCache();
 
+builder.Services.AddTransient<FileService>();
 
 builder.Services.AddTransient<ITransactionRepository, TransactionRepository>();
 

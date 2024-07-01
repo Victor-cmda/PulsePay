@@ -2,7 +2,7 @@
 {
     public class PaymentPixResponseDto
     {
-        public string PaymentId { get; set; }
+        public Guid Id { get; set; }
         public string Status { get; set; }
         public string Description { get; set; }
         public string QrCode { get; set; }

@@ -24,7 +24,7 @@ namespace Infrastructure.Factories
                 case "GetNet":
                     return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
                 case "K8Pay":
-                    return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
+                    return _serviceProvider.GetRequiredService<K8PayAuthenticationService>();
                 default:
                     throw new ArgumentException("Unsupported service type", nameof(gatewayType));
             }
