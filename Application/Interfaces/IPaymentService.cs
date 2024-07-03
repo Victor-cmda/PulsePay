@@ -1,6 +1,6 @@
 ﻿using Application.DTOs.BankSlip;
+using Application.DTOs.CreditCard.Payment;
 using Application.DTOs.Pix;
-using Domain.Entities.GetNet.Pix;
 
 namespace Domain.Interfaces
 {
@@ -8,6 +8,6 @@ namespace Domain.Interfaces
     {
         Task<PaymentPixResponseDto> GeneratePixPayment(PaymentPixRequestDto paymentRequest, Guid SellerId);
         Task<PaymentBankSlipResponseDto> GenerateBoletoPayment(PaymentBankSlipRequestDto paymentRequest, Guid SellerId);
-
+        Task<PaymentCreditCardResponseDto> GenerateCreditCardPayment(PaymentCreditCardRequestDto paymentRequest, Guid SellerId);
     }
 }

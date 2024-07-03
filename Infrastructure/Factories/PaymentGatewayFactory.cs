@@ -34,6 +34,7 @@ namespace Infrastructure.Factories
             {
                 "Pix" => _configuration["PaymentService:Pix:GatewayType"],
                 "BankSlip" => _configuration["PaymentService:BankSlip:GatewayType"],
+                "CreditCard" => _configuration["PaymentService:CreditCard:GatewayType"],
                 _ => throw new ArgumentException("Unsupported service type", nameof(requestType))
             };
         }

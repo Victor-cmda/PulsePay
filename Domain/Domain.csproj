@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Entities\K8Pay\CreditCard\" />
     <Folder Include="Entities\K8Pay\Pix\" />
   </ItemGroup>
 

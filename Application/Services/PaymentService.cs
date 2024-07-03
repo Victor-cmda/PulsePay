@@ -1,7 +1,7 @@
 ﻿using Application.DTOs.BankSlip;
+using Application.DTOs.CreditCard.Payment;
 using Application.DTOs.Pix;
 using Application.Interfaces;
-using Domain.Entities.GetNet.Pix;
 using Domain.Interfaces;
 
 namespace Application.Services
@@ -33,6 +33,13 @@ namespace Application.Services
             return await gateway.ProcessBankSlipPayment(paymentRequest, sellerId, token);
         }
 
+        public async Task<PaymentCreditCardResponseDto> GenerateCreditCardPayment(PaymentCreditCardRequestDto paymentRequest, Guid sellerId)
+        {
+            var authService = _authFactory.CreateAuthentication("CreditCard");
+            var token = await authService.GetTokenAsync();
+            var gateway = _gatewayFactory.CreateGateway("CreditCard");
+            return await gateway.ProcessCreditCardPayment(paymentRequest, sellerId, token);
+        }
     }
 
 }

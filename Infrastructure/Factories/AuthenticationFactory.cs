@@ -32,19 +32,13 @@ namespace Infrastructure.Factories
 
         private string GetPaymentTypeRequest(string requestType)
         {
-            string result;
-            switch (requestType)
+            return requestType switch
             {
-                case "Pix":
-                    result = _configuration["PaymentService:Pix:GatewayType"];
-                    break;
-                case "BankSlip":
-                    result = _configuration["PaymentService:BankSlip:GatewayType"];
-                    break;
-                default:
-                    throw new ArgumentException("Unsupported service type", nameof(requestType));
-            }
-            return result;
+                "Pix" => _configuration["PaymentService:Pix:GatewayType"],
+                "BankSlip" => _configuration["PaymentService:BankSlip:GatewayType"],
+                "CreditCard" => _configuration["PaymentService:CreditCard:GatewayType"],
+                _ => throw new ArgumentException("Unsupported service type", nameof(requestType))
+            };
         }
     }
 }

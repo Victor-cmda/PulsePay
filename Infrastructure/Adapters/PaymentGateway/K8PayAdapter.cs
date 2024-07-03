@@ -11,6 +11,7 @@ using Domain.Entities.K8Pay.BankSlip;
 using System.Security.Cryptography;
 using System.Text;
 using Infrastructure.Services;
+using Application.DTOs.CreditCard.Payment;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -34,6 +35,44 @@ namespace Infrastructure.Adapters.PaymentGateway
             _transactionService = transactionService;
             _fileService = fileService;
         }
+
+        #region private methods
+        private string DecryptAES128(string cipherText, string key)
+        {
+            byte[] iv = new byte[16];
+            byte[] buffer = Convert.FromBase64String(cipherText);
+            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = keyBytes;
+                aes.IV = iv;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Mode = CipherMode.CBC;
+
+                using (MemoryStream memoryStream = new MemoryStream(buffer))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ConfigureHttpClientHeaders(string authToken)
+        {
+            _httpClient.DefaultRequestHeaders.Accept.Clear();
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            _httpClient.DefaultRequestHeaders.Add("seller_id", _sellerId);
+        }
+
+        #endregion
 
         public async Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId, string authToken)
         {
@@ -84,45 +123,14 @@ namespace Infrastructure.Adapters.PaymentGateway
 
             return result;
         }
-
         public async Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             throw new NotImplementedException();
         }
 
-        private string DecryptAES128(string cipherText, string key)
+        public Task<PaymentCreditCardResponseDto> ProcessCreditCardPayment(PaymentCreditCardRequestDto paymentRequest, Guid sellerId, string authToken)
         {
-            byte[] iv = new byte[16];
-            byte[] buffer = Convert.FromBase64String(cipherText);
-            byte[] keyBytes = Encoding.UTF8.GetBytes(key);
-
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = keyBytes;
-                aes.IV = iv;
-                aes.Padding = PaddingMode.PKCS7;
-                aes.Mode = CipherMode.CBC;
-
-                using (MemoryStream memoryStream = new MemoryStream(buffer))
-                {
-                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
-                    {
-                        using (StreamReader streamReader = new StreamReader(cryptoStream))
-                        {
-                            return streamReader.ReadToEnd();
-                        }
-                    }
-                }
-            }
-        }
-
-        private void ConfigureHttpClientHeaders(string authToken)
-        {
-            _httpClient.DefaultRequestHeaders.Accept.Clear();
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-            _httpClient.DefaultRequestHeaders.Add("seller_id", _sellerId);
+            throw new NotImplementedException();
         }
     }
 }
