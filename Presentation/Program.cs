@@ -21,6 +21,9 @@ using Application.Mappers.K8Pay.BankSlip;
 using Application.Mappers.K8Pay;
 using Application.Mappers.GetNet.Pix;
 using Infrastructure.Services;
+using Domain.Entities.GetNet.CreditCard.Payment;
+using Application.DTOs.CreditCard.Payment;
+using Application.Mappers.GetNet.CreditCard;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -138,13 +141,20 @@ builder.Services.AddHttpClient<GetNetAuthenticationService>();
 builder.Services.AddHttpClient<K8PayAuthenticationService>();
 
 // Register mappers
-//GetNet
+#region GetNet
+//Pix
 builder.Services.AddTransient<IResponseMapper<GetNetPixResponse, PaymentPixResponseDto>, GetNetPixResponseMapper>();
 builder.Services.AddTransient<IResponseMapper<PaymentPixRequestDto, GetNetPixRequest>, GetNetPixRequestMapper>();
-//K8Pay
+//CreditCard
+builder.Services.AddTransient<IResponseMapper<GetNetCreditCardResponse, PaymentCreditCardResponseDto>, GetNetCreditCardResponseMapper>();
+builder.Services.AddTransient<IResponseMapper<PaymentCreditCardRequestDto, GetNetCreditCardRequest>, GetNetCreditCardRequestMapper>();
+#endregion
+
+#region K8Pay
+//BankSlip
 builder.Services.AddTransient<IResponseMapper<K8PayBankSlipResponse, PaymentBankSlipResponseDto>, K8PayBankSlipResponseMapper>();
 builder.Services.AddTransient<IResponseMapper<PaymentBankSlipRequestDto, K8PayBankSlipRequest>, K8PayBankSlipRequestMapper>();
-
+#endregion
 
 builder.Services.AddSingleton<IResponseMapperFactory, ResponseMapperFactory>();
 

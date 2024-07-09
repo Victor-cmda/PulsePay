@@ -14,10 +14,10 @@ namespace Application.Mappers.GetNet.CreditCard
                 order = new Domain.Entities.GetNet.CreditCard.Payment.Order
                 {
                     order_id = response.Order.Id,
-                    product_type = response.Order.ProductType,
+                    product_type = "service",
                     sales_tax = 0
                 },
-                customer = new Domain.Entities.GetNet.CreditCard.Payment.Customer
+                customer_credit = new Domain.Entities.GetNet.CreditCard.Payment.Customer
                 {
                     customer_id = response.Customer.Id,
                     first_name = response.Customer.FirstName,
@@ -47,10 +47,41 @@ namespace Application.Mappers.GetNet.CreditCard
                         security_code = response.Card.SecurityCode.ToString(),
                         brand = response.Card.CardBrand,
                         expiration_month = response.Card.ExpirationMonth,
-                        expiration_year = response.Card.ExpirationYear
+                        expiration_year = response.Card.ExpirationYear,
+
                     },
+                    delayed = false,
+                    pre_authorization = false,
+                    save_card_data = false,
+                    transaction_type = "FULL",
+                    number_installments = 1,
+                    soft_descriptor = "PulsePay Pagamentos"
+                },
+                shippings = new List<Shipping>()
+                {
+                    new Shipping
+                    {
+                        first_name = response.Customer.FirstName,
+                        name = response.Customer.Name,
+                        email = response.Customer.Email,
+                        shipping_amount = 0,
+                        phone_number = response.Customer.PhoneNumber,
+                        address = new Address
+                        {
+                            street = response.Customer.BillingAddress.Street,
+                            number = response.Customer.BillingAddress.Number,
+                            complement = response.Customer.BillingAddress.Complement,
+                            district = response.Customer.BillingAddress.District,
+                            city = response.Customer.BillingAddress.City,
+                            state = response.Customer.BillingAddress.State,
+                            country = response.Customer.BillingAddress.Country,
+                            postal_code = response.Customer.BillingAddress.PostalCode
+                        }
+                    }
                 },
             };
         }
     }
 }
+
+

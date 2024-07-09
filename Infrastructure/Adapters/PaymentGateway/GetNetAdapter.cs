@@ -91,6 +91,11 @@ namespace Infrastructure.Adapters.PaymentGateway
             }
         }
 
+        private string GenerateSessionId(string establishmentCode, string orderId)
+        {
+            return $"{establishmentCode}{orderId}";
+        }
+
         #endregion
 
         public async Task<PaymentPixResponseDto> ProcessPixPayment(PaymentPixRequestDto paymentRequest, Guid sellerId, string authToken)
@@ -137,13 +142,24 @@ namespace Infrastructure.Adapters.PaymentGateway
         {
             ConfigureHttpClientHeaders(authToken);
 
+            var sessionId = GenerateSessionId(sellerId.ToString(), paymentRequest.Order.Id); 
+            string captureUrl = $"https://h.online-metrix.net/fp/tags.js?org_id=1snn5n9w&session_id={sessionId}";
+
             var cardTokenResponse = await GenerateCardTokenAsync(paymentRequest);
             await VerifyCardAsync(paymentRequest, cardTokenResponse.number_token);
 
             var requestMapped = _responseMapperFactory.CreateMapper<PaymentCreditCardRequestDto, GetNetCreditCardRequest>().Map(paymentRequest);
-            requestMapped.credit.card.number_token = cardTokenResponse.number_token;
 
-            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/qrcode/pix", requestMapped);
+            requestMapped.credit.card.number_token = cardTokenResponse.number_token;
+            requestMapped.seller_id = sellerId.ToString();
+
+            requestMapped.device = new Device
+            {
+                device_id = sessionId,
+                ip_address = "127.0.0.1"
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/credit", requestMapped);
             var jsonResponseString = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
             {
