@@ -1,5 +1,5 @@
 ﻿using Application.DTOs.BankSlip;
-using Application.DTOs.CreditCard.Payment;
+using Application.DTOs.CreditCard;
 using Application.DTOs.Pix;
 
 namespace Domain.Interfaces

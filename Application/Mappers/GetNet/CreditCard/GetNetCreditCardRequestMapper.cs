@@ -1,4 +1,4 @@
-﻿using Application.DTOs.CreditCard.Payment;
+﻿using Application.DTOs.CreditCard;
 using Domain.Entities.GetNet.CreditCard.Payment;
 
 namespace Application.Mappers.GetNet.CreditCard
@@ -17,7 +17,7 @@ namespace Application.Mappers.GetNet.CreditCard
                     product_type = "service",
                     sales_tax = 0
                 },
-                customer_credit = new Domain.Entities.GetNet.CreditCard.Payment.Customer
+                customer = new Domain.Entities.GetNet.CreditCard.Payment.Customer
                 {
                     customer_id = response.Customer.Id,
                     first_name = response.Customer.FirstName,
@@ -44,40 +44,39 @@ namespace Application.Mappers.GetNet.CreditCard
                     card = new Domain.Entities.GetNet.CreditCard.Payment.Card
                     {
                         cardholder_name = response.Card.CardHolderName,
-                        security_code = response.Card.SecurityCode.ToString(),
+                        security_code = response.Card.SecurityCode,
                         brand = response.Card.CardBrand,
                         expiration_month = response.Card.ExpirationMonth,
                         expiration_year = response.Card.ExpirationYear,
-
                     },
                     delayed = false,
                     pre_authorization = false,
                     save_card_data = false,
                     transaction_type = "FULL",
                     number_installments = 1,
-                    soft_descriptor = "PulsePay Pagamentos"
+                    soft_descriptor = "PULSEPAY*PAGAMENTOS",
+                    credentials_on_file_type = "ONE_CLICK_PAYMENT",
+                    transaction_id = 1002217281190421,
+                    dynamic_mcc = 6531
                 },
-                shippings = new List<Shipping>()
+                wallet = new Wallet
                 {
-                    new Shipping
+                    type = "55",
+                    id = "000",
+                    fund_transfer = new FundTransfer
                     {
-                        first_name = response.Customer.FirstName,
-                        name = response.Customer.Name,
-                        email = response.Customer.Email,
-                        shipping_amount = 0,
-                        phone_number = response.Customer.PhoneNumber,
-                        address = new Address
-                        {
-                            street = response.Customer.BillingAddress.Street,
-                            number = response.Customer.BillingAddress.Number,
-                            complement = response.Customer.BillingAddress.Complement,
-                            district = response.Customer.BillingAddress.District,
-                            city = response.Customer.BillingAddress.City,
-                            state = response.Customer.BillingAddress.State,
-                            country = response.Customer.BillingAddress.Country,
-                            postal_code = response.Customer.BillingAddress.PostalCode
-                        }
+                        pay_action = "FT",
                     }
+                },
+                sub_merchant = new SubMerchant
+                {
+                    identification_code = "9058344",
+                    document_type = "CNPJ",
+                    document_number = "06729003000147",
+                    address = "RUA CRAVINA, 413 SALA01 - VILA ADRIANA",
+                    city = "Foz do Iguacu",
+                    postal_code = "85854495",
+                    state = "PR"
                 },
             };
         }

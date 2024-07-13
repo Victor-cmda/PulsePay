@@ -1,4 +1,4 @@
-﻿using Application.DTOs.CreditCard.Payment;
+﻿using Application.DTOs.CreditCard;
 using Domain.Entities.GetNet.CreditCard.Payment;
 
 namespace Application.Mappers.GetNet.CreditCard

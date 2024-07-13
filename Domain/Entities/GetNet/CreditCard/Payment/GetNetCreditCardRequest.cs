@@ -6,7 +6,7 @@
         public decimal amount { get; set; }
         public string currency { get; set; }
         public Order order { get; set; }
-        public Customer customer_credit { get; set; }
+        public Customer customer { get; set; }
         public Device device { get; set; }
         public List<Shipping> shippings { get; set; }
         public SubMerchant sub_merchant { get; set; }
@@ -129,7 +129,7 @@
     public class FundTransfer
     {
         public string pay_action { get; set; }
-        public Receiver Receiver { get; set; }
+        public Receiver receiver { get; set; }
     }
 
     public class Receiver

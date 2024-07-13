@@ -1,5 +1,5 @@
 ﻿using Application.DTOs.BankSlip;
-using Application.DTOs.CreditCard.Payment;
+using Application.DTOs.CreditCard;
 using Application.DTOs.Pix;
 using Application.Interfaces;
 using Domain.Entities.GetNet.CreditCard.Payment;
@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -78,7 +79,7 @@ namespace Infrastructure.Adapters.PaymentGateway
                 brand = paymentRequest.Card.CardBrand,
                 expiration_month = paymentRequest.Card.ExpirationMonth,
                 expiration_year = paymentRequest.Card.ExpirationYear,
-                security_code = paymentRequest.Card.SecurityCode.ToString()
+                security_code = paymentRequest.Card.SecurityCode
             };
 
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "cards/verification", cardVerificationRequest);
@@ -143,7 +144,7 @@ namespace Infrastructure.Adapters.PaymentGateway
             ConfigureHttpClientHeaders(authToken);
 
             var sessionId = GenerateSessionId(sellerId.ToString(), paymentRequest.Order.Id); 
-            string captureUrl = $"https://h.online-metrix.net/fp/tags.js?org_id=1snn5n9w&session_id={sessionId}";
+            string captureUrl = $"https://h.online-metrix.net/fp/tags.js?org_id=k8vif92e&session_id={sessionId}";
 
             var cardTokenResponse = await GenerateCardTokenAsync(paymentRequest);
             await VerifyCardAsync(paymentRequest, cardTokenResponse.number_token);
@@ -151,22 +152,22 @@ namespace Infrastructure.Adapters.PaymentGateway
             var requestMapped = _responseMapperFactory.CreateMapper<PaymentCreditCardRequestDto, GetNetCreditCardRequest>().Map(paymentRequest);
 
             requestMapped.credit.card.number_token = cardTokenResponse.number_token;
-            requestMapped.seller_id = sellerId.ToString();
+            requestMapped.seller_id = "67398721-7210-4951-bb52-1777dc9277f5";
 
             requestMapped.device = new Device
             {
                 device_id = sessionId,
-                ip_address = "127.0.0.1"
+                ip_address = "186.250.16.86"
             };
 
             var response = await _httpClient.PostAsJsonAsync(_apiBaseUrl + "payments/credit", requestMapped);
             var jsonResponseString = await response.Content.ReadAsStringAsync();
+            var teste = JsonSerializer.Serialize(requestMapped);
             if (!response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"Erro na resposta: {jsonResponseString}");
                 throw new Exception("Falha ao processar pagamento com Cartão de Crédito.");
             }
-
             var paymentResponse = await Task.Run(() => Newtonsoft.Json.JsonConvert.DeserializeObject<GetNetCreditCardResponse>(jsonResponseString));
             var mapper = _responseMapperFactory.CreateMapper<GetNetCreditCardResponse, PaymentCreditCardResponseDto>();
             var result = mapper.Map(paymentResponse);

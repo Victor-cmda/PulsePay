@@ -1,8 +1,8 @@
-﻿namespace Application.DTOs.CreditCard.Payment
+﻿namespace Application.DTOs.CreditCard
 {
     public class PaymentCreditCardRequestDto
     {
-        public decimal Amount { get; set; }
+        public int Amount { get; set; }
         public Card Card { get; set; }
         public Customer Customer { get; set; }
         public Order Order { get; set; }
@@ -14,7 +14,7 @@
         public string CardBrand { get; set; }
         public string ExpirationYear { get; set; }
         public string ExpirationMonth { get; set; }
-        public int SecurityCode { get; set; }
+        public string SecurityCode { get; set; }
         public string CardHolderName { get; set; }
     }
     public class Order

@@ -1,4 +1,4 @@
-﻿namespace Application.DTOs.CreditCard.Payment
+﻿namespace Application.DTOs.CreditCard
 {
     public class PaymentCreditCardResponseDto
     {

@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <Folder Include="Mappers\GetNet\BankSlip\" />
-    <Folder Include="Mappers\K8Pay\CreditCard\" />
     <Folder Include="Mappers\K8Pay\Pix\" />
   </ItemGroup>
 
