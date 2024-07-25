@@ -129,8 +129,10 @@ builder.Services.AddMemoryCache();
 builder.Services.AddTransient<FileService>();
 
 builder.Services.AddTransient<ITransactionRepository, TransactionRepository>();
+builder.Services.AddTransient<IDashboardRepository, DashboardRepository>();
 
 builder.Services.AddTransient<ITransactionService, TransactionService>();
+builder.Services.AddTransient<IDashboardService, DashboardService>();
 
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
