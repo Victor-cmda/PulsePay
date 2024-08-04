@@ -25,6 +25,8 @@ namespace Infrastructure.Factories
                     return _serviceProvider.GetRequiredService<GetNetAuthenticationService>();
                 case "K8Pay":
                     return _serviceProvider.GetRequiredService<K8PayAuthenticationService>();
+                case "Cielo":
+                    return _serviceProvider.GetRequiredService<CieloAuthenticationService>();
                 default:
                     throw new ArgumentException("Unsupported service type", nameof(gatewayType));
             }

@@ -23,6 +23,8 @@ namespace Infrastructure.Factories
                     return _serviceProvider.GetRequiredService<GetNetAdapter>();
                 case "K8Pay":
                     return _serviceProvider.GetRequiredService<K8PayAdapter>();
+                case "Cielo":
+                    return _serviceProvider.GetRequiredService<CieloAdapter>();
                 default:
                     throw new ArgumentException("Unsupported gateway type");
             }

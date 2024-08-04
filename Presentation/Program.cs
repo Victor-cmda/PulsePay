@@ -25,6 +25,7 @@ using Domain.Entities.GetNet.CreditCard.Payment;
 using Application.Mappers.GetNet.CreditCard;
 using Domain.Entities.K8Pay.CreditCard;
 using Application.DTOs.CreditCard;
+using Domain.Entities.Cielo.CreditCard;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -138,10 +139,12 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, K8PayAuthenticationService>();
+builder.Services.AddScoped<IAuthenticationPaymentApiService, CieloAuthenticationService>();
 
 
 builder.Services.AddHttpClient<GetNetAuthenticationService>();
 builder.Services.AddHttpClient<K8PayAuthenticationService>();
+builder.Services.AddHttpClient<CieloAuthenticationService>();
 
 // Register mappers
 #region GetNet
@@ -163,11 +166,18 @@ builder.Services.AddTransient<IResponseMapper<K8PayCreditCardResponse, PaymentCr
 builder.Services.AddTransient<IResponseMapper<PaymentCreditCardRequestDto, K8PayCreditCardRequest>, K8PayCreditCardRequestMapper>();
 #endregion
 
+#region Cielo
+//CreditCard
+builder.Services.AddTransient<IResponseMapper<CieloCreditCardResponse, PaymentCreditCardResponseDto>, CieloCreditCardResponseMapper>();
+builder.Services.AddTransient<IResponseMapper<PaymentCreditCardRequestDto, CieloCreditCardRequest>, CieloCreditCardRequestMapper>();
+#endregion
+
 builder.Services.AddSingleton<IResponseMapperFactory, ResponseMapperFactory>();
 
 // Register adapters
 builder.Services.AddTransient<GetNetAdapter>();
 builder.Services.AddTransient<K8PayAdapter>();
+builder.Services.AddTransient<CieloAdapter>();
 
 // Register Factories
 builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
