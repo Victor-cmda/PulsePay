@@ -42,7 +42,6 @@ namespace Infrastructure.Adapters.PaymentGateway
             _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
             _httpClient.DefaultRequestHeaders.Add("MerchantId", "c03d5f2c-b4d7-402f-8c64-e7a3402e8a04");
             _httpClient.DefaultRequestHeaders.Add("MerchantKey", "ROCFVAVZHMKVMSWFFEXVNSBCXDGKTMKVDROTIJIE");
-            //_httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
         }
         #endregion
 

@@ -19,6 +19,7 @@ namespace Application.Mappers.GetNet.CreditCard
                     SoftDescriptor = "PULSEPAY*PAGAMENTOS",
                     Recurrent = false,
                     Currency = "BRL",
+                    Interest = "ByMerchant",
                     CreditCard = new CreditCardRequest
                     {
                         CardNumber = response.Card.CardNumber,
@@ -38,6 +39,8 @@ namespace Application.Mappers.GetNet.CreditCard
                 {
                     Name = response.Customer.Name,
                     Email = response.Customer.Email,
+                    IdentityType = response.Customer.DocumentType,
+                    Identity = response.Customer.Document,
                     Address = new AddressRequest
                     {
                         City = response.Customer.BillingAddress.City,
@@ -47,7 +50,8 @@ namespace Application.Mappers.GetNet.CreditCard
                         Complement = response.Customer.BillingAddress.Complement,
                         Number = response.Customer.BillingAddress.Number,
                         ZipCode = response.Customer.BillingAddress.PostalCode
-                    }
+                    },
+                    Birthdate = response.Customer.Birthdate
                 }
             };
         }

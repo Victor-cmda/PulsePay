@@ -32,6 +32,7 @@
         public string DocumentType { get; set; }
         public string Document { get; set; }
         public string PhoneNumber { get; set; }
+        public string Birthdate { get; set; }
         public BillingAddress BillingAddress { get; set; }
     }
 

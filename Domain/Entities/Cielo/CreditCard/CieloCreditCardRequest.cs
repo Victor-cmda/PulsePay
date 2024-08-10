@@ -11,7 +11,9 @@
     {
         public string Name { get; set; }
         public string Email { get; set; }
-        public DateTime Birthdate { get; set; }
+        public string Birthdate { get; set; }
+        public string Identity { get; set; }
+        public string IdentityType { get; set; }
         public AddressRequest Address { get; set; }
         public AddressRequest DeliveryAddress { get; set; }
         public BillingRequest Billing { get; set; }
