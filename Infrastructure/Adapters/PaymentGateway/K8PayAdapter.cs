@@ -1,18 +1,17 @@
 ﻿using Application.DTOs.BankSlip;
+using Application.DTOs.CreditCard;
 using Application.DTOs.Pix;
 using Application.Interfaces;
-using Domain.Entities.GetNet.Pix;
+using Domain.Entities.K8Pay.BankSlip;
+using Domain.Entities.K8Pay.CreditCard;
+using Domain.Models;
+using Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Domain.Models;
-using Domain.Entities.K8Pay.BankSlip;
 using System.Security.Cryptography;
 using System.Text;
-using Infrastructure.Services;
-using Domain.Entities.K8Pay.CreditCard;
-using Application.DTOs.CreditCard;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -106,10 +105,10 @@ namespace Infrastructure.Adapters.PaymentGateway
             var transaction = new Transaction
             {
                 Id = result.Id,
-                TransactionId = paymentResponse.Identificador,
+                OrderId = paymentRequest.OrderId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "BANKSLIP",
-                Status = "Pendente",
+                Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.Customer.DocumentType,
@@ -154,10 +153,10 @@ namespace Infrastructure.Adapters.PaymentGateway
             var transaction = new Transaction
             {
                 Id = result.Id,
-                TransactionId = paymentResponse.Identificador,
+                OrderId = paymentRequest.OrderId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "CREDITCARD",
-                Status = "Pendente",
+                Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.Customer.DocumentType,

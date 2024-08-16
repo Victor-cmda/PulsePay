@@ -121,10 +121,10 @@ namespace Infrastructure.Adapters.PaymentGateway
             var transaction = new Transaction
             {
                 Id = result.Id,
-                TransactionId = result.TransactionId,
+                OrderId = paymentRequest.OrderId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "PIX",
-                Status = result.Status,
+                Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.DocumentType,
@@ -143,7 +143,7 @@ namespace Infrastructure.Adapters.PaymentGateway
         {
             ConfigureHttpClientHeaders(authToken);
 
-            var sessionId = GenerateSessionId(sellerId.ToString(), paymentRequest.Order.Id); 
+            var sessionId = GenerateSessionId(sellerId.ToString(), paymentRequest.OrderId);
             string captureUrl = $"https://h.online-metrix.net/fp/tags.js?org_id=k8vif92e&session_id={sessionId}";
 
             var cardTokenResponse = await GenerateCardTokenAsync(paymentRequest);
@@ -177,10 +177,10 @@ namespace Infrastructure.Adapters.PaymentGateway
             var transaction = new Transaction
             {
                 Id = result.Id,
-                TransactionId = result.Credit.TransactionId.ToString(),
+                OrderId = paymentRequest.OrderId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "CREDITCARD",
-                Status = result.Status,
+                Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.Customer.DocumentType,
@@ -195,7 +195,7 @@ namespace Infrastructure.Adapters.PaymentGateway
 
             return result;
         }
-        
+
         public async Task<PaymentBankSlipResponseDto> ProcessBankSlipPayment(PaymentBankSlipRequestDto paymentRequest, Guid sellerId, string authToken)
         {
             throw new NotImplementedException();

@@ -29,14 +29,16 @@ namespace Domain.Models
         public string PaymentType { get; set; }
         [Required]
         [StringLength(100)]
-        public string TransactionId { get; set; }
+        public string OrderId { get; set; }
         [Column(TypeName = "decimal(10,2)")]
         public decimal Amount { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime? PaidAt { get; set; }
         [Required]
         public Guid SellerId { get; set; }
         [StringLength(20)]
         public string Status { get; set; }
+        public string Description { get; set; }
         public JObject Details { get; set; }
     }
 }

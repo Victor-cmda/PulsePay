@@ -3,16 +3,11 @@ using Application.DTOs.CreditCard;
 using Application.DTOs.Pix;
 using Application.Interfaces;
 using Domain.Entities.Cielo.CreditCard;
-using Domain.Entities.GetNet.CreditCard.Payment;
-using Domain.Entities.GetNet.CreditCard.Token;
-using Domain.Entities.GetNet.CreditCard.Verification;
-using Domain.Entities.GetNet.Pix;
 using Domain.Models;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace Infrastructure.Adapters.PaymentGateway
 {
@@ -68,10 +63,10 @@ namespace Infrastructure.Adapters.PaymentGateway
             var transaction = new Transaction
             {
                 Id = result.Id,
-                TransactionId = result.Id.ToString(),
+                OrderId = paymentRequest.OrderId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "CREDITCARD",
-                Status = result.Status,
+                Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 Details = jsonResponseObject,
                 DocumentType = paymentRequest.Customer.DocumentType,

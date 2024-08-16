@@ -77,5 +77,29 @@ namespace Application.Services
 
             return dashboardData;
         }
+
+        public async Task<List<TransactionDataDto>> GetHistoryTransactions(List<Guid> sellers)
+        {
+            var transactions = await _dashboardRepository.GetTransactionsBySellers(sellers);
+
+            var historyData = new List<TransactionDataDto>();
+
+            foreach (var item in transactions)
+            {
+                historyData.Add(new TransactionDataDto
+                {
+                    Id = item.Id,
+                    Amount = Convert.ToDouble(item.Amount),
+                    CreatedAt = item.CreatedAt,
+                    Status = item.Status,
+                    Customer = item.NameCustumer,
+                    PaymentType = item.PaymentType,
+                    SellerId = item.SellerId,
+                    Description = item.Description,
+                    PaidAt = item.PaidAt
+                });
+            }
+            return historyData;
+        }
     }
 }

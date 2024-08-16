@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Presentation.API
 {
     [ApiController]
-    [Route("api/dashboard")]
+    [Route("api")]
     public class DashboardController : ControllerBase
     {
         private readonly IDashboardService _dashboardService;
@@ -17,12 +17,28 @@ namespace Presentation.API
         }
 
         [HttpPost]
+        [Route("dashboard")]
         public async Task<ActionResult<DashboardDataDto>> GetDashboard(List<Guid> sellers)
         {
             try
             {
                 var dashboardData = await _dashboardService.GetDashboard(sellers);
                 return Ok(dashboardData);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+        }
+        
+        [HttpPost]
+        [Route("history")]
+        public async Task<ActionResult<List<TransactionDataDto>>> GetHistoryTransactions(List<Guid> sellers)
+        {
+            try
+            {
+                var historyData = await _dashboardService.GetHistoryTransactions(sellers);
+                return Ok(historyData);
             }
             catch (Exception ex)
             {

@@ -29,7 +29,7 @@ namespace Application.Mappers.K8Pay
                 ClienteCidade = response.Customer.BillingAddress.City,
                 ClienteCEP = response.Customer.BillingAddress.PostalCode,
                 ClienteUF = response.Customer.BillingAddress.State,
-                NumeroPedido = response.Order.Id,
+                NumeroPedido = response.OrderId,
                 Recorrencia = false
             };
         }

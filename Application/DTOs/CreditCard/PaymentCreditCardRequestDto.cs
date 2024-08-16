@@ -3,9 +3,9 @@
     public class PaymentCreditCardRequestDto
     {
         public int Amount { get; set; }
+        public string OrderId { get; set; }
         public Card Card { get; set; }
         public Customer Customer { get; set; }
-        public Order Order { get; set; }
     }
 
     public class Card
@@ -17,11 +17,7 @@
         public string SecurityCode { get; set; }
         public string CardHolderName { get; set; }
     }
-    public class Order
-    {
-        public string Id { get; set; }
-        public string ProductType { get; set; }
-    }
+
     public class Customer
     {
         public string Id { get; set; }

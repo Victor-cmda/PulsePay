@@ -19,7 +19,7 @@ namespace Infrastructure.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
                 entity.Property(e => e.PaymentType).HasColumnName("PaymentType").IsRequired().HasMaxLength(50);
-                entity.Property(e => e.TransactionId).HasColumnName("TransactionId").IsRequired().HasMaxLength(50);
+                entity.Property(e => e.OrderId).HasColumnName("OrderId").IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Amount).HasColumnName("Amount").HasColumnType("decimal(10,2)");
                 entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc)).IsRequired();
                 entity.Property(e => e.Status).HasColumnName("Status").HasMaxLength(20);

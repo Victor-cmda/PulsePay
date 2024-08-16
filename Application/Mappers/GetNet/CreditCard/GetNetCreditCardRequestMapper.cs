@@ -11,9 +11,9 @@ namespace Application.Mappers.GetNet.CreditCard
             {
                 amount = response.Amount,
                 currency = "BRL",
-                order = new Domain.Entities.GetNet.CreditCard.Payment.Order
+                order = new Order
                 {
-                    order_id = response.Order.Id,
+                    order_id = response.OrderId,
                     product_type = "service",
                     sales_tax = 0
                 },
