@@ -38,7 +38,7 @@ namespace Domain.Models
         public Guid SellerId { get; set; }
         [StringLength(20)]
         public string Status { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
         public JObject Details { get; set; }
     }
 }
