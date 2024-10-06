@@ -1,3 +1,5 @@
+using Application.DTOs;
+using Application.Interfaces;
 using Domain.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,30 +10,41 @@ namespace Presentation.API
     [Route("api/getnet")]
     public class GetNetListenerController : ControllerBase
     {
-        private readonly IPaymentService _paymentService;
+        private readonly IListenerService _listenerService;
 
-        public GetNetListenerController(IPaymentService paymentService)
+        public GetNetListenerController(IListenerService listenerService)
         {
-            _paymentService = paymentService;
+            _listenerService = listenerService;
         }
 
         [HttpGet("pix")]
-        public async Task<IActionResult> PixNotification([FromQuery] string payment_type,
+        [HttpGet]
+        public async Task<IActionResult> ReceivePaymentNotification(
+            [FromQuery] string payment_type,
             [FromQuery] string customer_id,
             [FromQuery] string order_id,
             [FromQuery] string payment_id,
             [FromQuery] int amount,
             [FromQuery] string status,
             [FromQuery] string transaction_id,
-            [FromQuery] string transaction_timestamp,
+            [FromQuery] DateTime transaction_timestamp,
             [FromQuery] string receiver_psp_name,
             [FromQuery] string receiver_psp_code,
             [FromQuery] string receiver_name,
             [FromQuery] string receiver_cnpj,
             [FromQuery] string receiver_cpf,
-            [FromQuery] string terminal_nsu)
+            [FromQuery] string terminal_nsu,
+            [FromQuery] string description_detail = null)
         {
-            Console.WriteLine($"Notificação de PIX Recebida: {payment_type}, {customer_id}, {order_id}, {payment_id}, {amount}, {status}, {transaction_id}, {transaction_timestamp}, {receiver_psp_name}, {receiver_psp_code}, {receiver_name}, {receiver_cnpj}, {receiver_cpf}, {terminal_nsu}");
+
+            await _listenerService.GenerateNotification(new NotificationDto
+            {
+                OrderId = order_id,
+                Description = description_detail,
+                Status = status,
+                TransactionId = payment_id,
+                TransactionTimestamp = transaction_timestamp,
+            });
 
             return Ok();
         }

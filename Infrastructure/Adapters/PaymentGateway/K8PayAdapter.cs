@@ -116,7 +116,9 @@ namespace Infrastructure.Adapters.PaymentGateway
                 EmailCustumer = paymentRequest.Customer.Email,
                 NameCustumer = paymentRequest.Customer.Name,
                 SellerId = sellerId,
-                GatewayType = "K8Pay"
+                GatewayType = "K8Pay",
+                CustomerId = paymentRequest.Customer.Id,
+                PaymentId = paymentResponse.Identificador,
             };
 
             await _transactionService.CreateTransactionAsync(transaction);
@@ -164,7 +166,9 @@ namespace Infrastructure.Adapters.PaymentGateway
                 EmailCustumer = paymentRequest.Customer.Email,
                 NameCustumer = paymentRequest.Customer.Name,
                 SellerId = sellerId,
-                GatewayType = "K8Pay"
+                GatewayType = "K8Pay",
+                CustomerId = paymentRequest.Customer.Id,
+                PaymentId = paymentResponse.Identificador,
             };
 
             await _transactionService.CreateTransactionAsync(transaction);

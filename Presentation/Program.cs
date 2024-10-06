@@ -26,6 +26,8 @@ using Application.Mappers.GetNet.CreditCard;
 using Domain.Entities.K8Pay.CreditCard;
 using Application.DTOs.CreditCard;
 using Domain.Entities.Cielo.CreditCard;
+using Application.Config;
+using Application.BackgroundService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +47,8 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
 });
+
+builder.Services.Configure<PulseAuthApiSettings>(builder.Configuration.GetSection("PulseAuthApi"));
 
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 var key = Encoding.ASCII.GetBytes(jwtConfig.Key);
@@ -131,9 +135,11 @@ builder.Services.AddTransient<FileService>();
 
 builder.Services.AddTransient<ITransactionRepository, TransactionRepository>();
 builder.Services.AddTransient<IDashboardRepository, DashboardRepository>();
+builder.Services.AddTransient<INotificationRepository, NotificationRepository>();
 
 builder.Services.AddTransient<ITransactionService, TransactionService>();
 builder.Services.AddTransient<IDashboardService, DashboardService>();
+builder.Services.AddTransient<IListenerService, ListenerService>();
 
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
@@ -183,6 +189,8 @@ builder.Services.AddTransient<CieloAdapter>();
 builder.Services.AddTransient<IPaymentGatewayFactory, PaymentGatewayFactory>();
 builder.Services.AddTransient<IAuthenticationFactory, AuthenticationFactory>();
 
+//Register Background Services
+builder.Services.AddHostedService<NotificationRetryService>();
 
 var app = builder.Build();
 

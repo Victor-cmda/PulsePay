@@ -5,18 +5,43 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories
 {
-    public class DashboardRepository : IDashboardRepository
+    public class TransactionRepository : ITransactionRepository
     {
         private readonly AppDbContext _context;
 
-        public DashboardRepository(AppDbContext context)
+        public TransactionRepository(AppDbContext context)
         {
             _context = context;
         }
-
-        public async Task<IEnumerable<Transaction>> GetTransactionsBySellers(List<Guid> sellers)
+        public async Task<Transaction> AddAsync(Transaction transaction)
         {
-            return await _context.Transactions.Where(t => sellers.Contains(t.SellerId)).OrderBy(x=>x.CreatedAt).ToListAsync();
+            try
+            {
+                await _context.Set<Transaction>().AddAsync(transaction);
+                await _context.SaveChangesAsync();
+                return transaction;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error saving transaction: {ex.InnerException?.Message}", ex);
+            }
+        }
+
+        public async Task<Transaction> UpdateAsync(Transaction transaction)
+        {
+            _context.Set<Transaction>().Update(transaction);
+            await _context.SaveChangesAsync();
+            return transaction;
+        }
+
+        public async Task<Transaction> GetByIdAsync(Guid Id)
+        {
+            return await _context.Set<Transaction>().FindAsync(Id);
+        }
+
+        public async Task<Transaction> GetByOrderAsync(string orderId)
+        {
+            return await _context.Set<Transaction>().FirstOrDefaultAsync(x => x.OrderId == orderId);
         }
     }
 }

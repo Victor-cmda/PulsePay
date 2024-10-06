@@ -132,7 +132,10 @@ namespace Infrastructure.Adapters.PaymentGateway
                 EmailCustumer = paymentRequest.Email,
                 NameCustumer = paymentRequest.Name,
                 SellerId = sellerId,
-                GatewayType = "GetNet"
+                GatewayType = "GetNet",
+                CustomerId = paymentRequest.CustomerId,
+                PaymentId = paymentResponse.payment_id,
+                TransactionId = paymentResponse.additional_data.transaction_id
             };
 
             await _transactionService.CreateTransactionAsync(transaction);
@@ -188,7 +191,11 @@ namespace Infrastructure.Adapters.PaymentGateway
                 EmailCustumer = paymentRequest.Customer.Email,
                 NameCustumer = paymentRequest.Customer.Name,
                 SellerId = sellerId,
-                GatewayType = "GetNet"
+                GatewayType = "GetNet",
+                CustomerId = paymentRequest.Customer.Id,
+                PaymentId = paymentResponse.PaymentId.ToString(),
+                TransactionId = paymentResponse.Credit.TransactionId.ToString()
+
             };
 
             await _transactionService.CreateTransactionAsync(transaction);

@@ -23,7 +23,7 @@ namespace Presentation.API
             _logger = logger;
         }
 
-        //[Authorize(Policy = "ClientPolicy")]
+        [Authorize(Policy = "ClientPolicy")]
         [HttpPost("pix")]
         [ValidateSellerId]
         public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentPixRequestDto paymentRequest)
@@ -47,7 +47,7 @@ namespace Presentation.API
             }
         }
 
-        //[Authorize(Policy = "ClientPolicy")]
+        [Authorize(Policy = "ClientPolicy")]
         [HttpPost("boleto")]
         [ValidateSellerId]
         public async Task<IActionResult> GenerateBoletoPayment([FromBody] PaymentBankSlipRequestDto paymentRequest)
@@ -70,6 +70,7 @@ namespace Presentation.API
             }
         }
 
+        [Authorize(Policy = "ClientPolicy")]
         [HttpPost("card/credit")]
         [ValidateSellerId]
         public async Task<IActionResult> GenerateCreditCardPayment([FromBody] PaymentCreditCardRequestDto paymentRequest)

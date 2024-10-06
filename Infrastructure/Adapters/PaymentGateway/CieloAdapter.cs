@@ -74,7 +74,10 @@ namespace Infrastructure.Adapters.PaymentGateway
                 EmailCustumer = paymentRequest.Customer.Email,
                 NameCustumer = paymentRequest.Customer.Name,
                 SellerId = sellerId,
-                GatewayType = "Cielo"
+                GatewayType = "Cielo",
+                CustomerId = paymentRequest.Customer.Id,
+                PaymentId = paymentResponse.Payment.PaymentId.ToString(),
+                TransactionId = paymentResponse.Payment.Tid
             };
 
             await _transactionService.CreateTransactionAsync(transaction);
