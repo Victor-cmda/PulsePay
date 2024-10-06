@@ -27,7 +27,7 @@ namespace Application.Services
 
         public async Task<bool> GenerateNotification(NotificationDto notification)
         {
-            var transaction = await _transactionRepository.GetByOrderAsync(notification.OrderId);
+            var transaction = await _transactionRepository.GetByPaymentIdAsync(notification.PaymentId);
 
             if (transaction == null)
             {
@@ -57,6 +57,7 @@ namespace Application.Services
             {
                 TransactionId = transaction.Id,
                 Status = notification.Status,
+                SendStatus = "PENDING",
                 Description = notification.Description,
                 CreatedAt = DateTime.UtcNow,
                 ClientUrl = callback.Registration,
@@ -70,7 +71,9 @@ namespace Application.Services
 
             var notificationPayload = new
             {
-                paymentId = transaction.Id,
+                id = transaction.Id,
+                paymentId = transaction.PaymentId,
+                orderId = transaction.OrderId,
                 status = notification.Status,
                 amount = transaction.Amount,
                 paidAt = transaction.PaidAt

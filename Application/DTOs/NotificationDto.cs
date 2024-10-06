@@ -4,6 +4,12 @@
     {
         public string TransactionId { get; set; }
 
+        public string PaymentId { get; set; }
+
+        public string PaymentType { get; set; }
+
+        public string CustomerId { get; set; }
+
         public string Status { get; set; }
 
         public string? Description { get; set; }

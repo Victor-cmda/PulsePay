@@ -42,7 +42,10 @@ namespace Presentation.API
                 OrderId = order_id,
                 Description = description_detail,
                 Status = status,
-                TransactionId = payment_id,
+                TransactionId = transaction_id,
+                CustomerId = customer_id,
+                PaymentId = payment_id,
+                PaymentType = payment_type,
                 TransactionTimestamp = transaction_timestamp,
             });
 

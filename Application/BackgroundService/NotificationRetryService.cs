@@ -54,10 +54,12 @@ namespace Application.BackgroundService
                         var client = _httpClientFactory.CreateClient();
                         var notificationPayload = new
                         {
-                            paymentId = notification.Transaction.Id,
+                            paymentId = notification.Transaction.PaymentId,
                             status = notification.Status,
                             amount = notification.Transaction.Amount,
-                            paidAt = notification.Transaction.PaidAt
+                            paidAt = notification.Transaction.PaidAt,
+                            orderId = notification.Transaction.OrderId,
+                            id = notification.Transaction.Id
                         };
 
                         var jsonContent = new StringContent(JsonConvert.SerializeObject(notificationPayload), Encoding.UTF8, "application/json");
