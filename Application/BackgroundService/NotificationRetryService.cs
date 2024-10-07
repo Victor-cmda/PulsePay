@@ -67,7 +67,7 @@ namespace Application.BackgroundService
 
                         if (response.IsSuccessStatusCode)
                         {
-                            notification.SendStatus = "SENT";
+                            notification.SendStatus = "PAID";
                             await notificationRepository.UpdateAsync(notification);
                         }
                     }

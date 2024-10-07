@@ -87,7 +87,7 @@ namespace Application.Services
 
                 if (postResponse.IsSuccessStatusCode)
                 {
-                    notificationEntity.SendStatus = "SENT";
+                    notificationEntity.SendStatus = "PAID";
                     await _notificationRepository.UpdateAsync(notificationEntity);
                 }
 

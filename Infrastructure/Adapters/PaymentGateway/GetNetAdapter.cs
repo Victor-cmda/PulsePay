@@ -140,6 +140,8 @@ namespace Infrastructure.Adapters.PaymentGateway
 
             await _transactionService.CreateTransactionAsync(transaction);
 
+            result.OrderId = paymentRequest.OrderId;
+
             return result;
         }
         public async Task<PaymentCreditCardResponseDto> ProcessCreditCardPayment(PaymentCreditCardRequestDto paymentRequest, Guid sellerId, string authToken)
