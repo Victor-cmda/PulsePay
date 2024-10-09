@@ -32,8 +32,8 @@ namespace Presentation.API
             [FromQuery] string receiver_psp_code,
             [FromQuery] string receiver_name,
             [FromQuery] string receiver_cnpj,
-            [FromQuery] string receiver_cpf,
-            [FromQuery] string terminal_nsu,
+            [FromQuery] string receiver_cpf = null,
+            [FromQuery] string terminal_nsu = null,
             [FromQuery] string description_detail = null)
         {
 
