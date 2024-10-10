@@ -28,12 +28,13 @@ namespace Presentation.API
             [FromQuery] string status,
             [FromQuery] string transaction_id,
             [FromQuery] DateTime transaction_timestamp,
+            [FromQuery] string terminal_nsu,
             [FromQuery] string receiver_psp_name = null,
             [FromQuery] string receiver_psp_code = null,
             [FromQuery] string receiver_name = null,
             [FromQuery] string receiver_cnpj = null,
             [FromQuery] string receiver_cpf = null,
-            [FromQuery] string terminal_nsu = null)
+            [FromQuery] string description_detail = null)
         {
 
             await _listenerService.GenerateNotification(new NotificationDto
