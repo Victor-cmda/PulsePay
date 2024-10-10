@@ -18,37 +18,42 @@ namespace Presentation.API
         }
 
         [HttpGet("pix")]
-        public async Task<IActionResult> ReceivePaymentNotification(
-            [FromQuery] string payment_type,
-            [FromQuery] string customer_id,
-            [FromQuery] string order_id,
-            [FromQuery] Guid payment_id,
-            [FromQuery] int amount,
-            [FromQuery] string status,
-            [FromQuery] string transaction_id,
-            [FromQuery] DateTime transaction_timestamp,
-            [FromQuery] string terminal_nsu,
-            [FromQuery] string receiver_psp_name = null,
-            [FromQuery] string receiver_psp_code = null,
-            [FromQuery] string receiver_name = null,
-            [FromQuery] string receiver_cnpj = null,
-            [FromQuery] string receiver_cpf = null,
-            [FromQuery] string description_detail = null)
+        public async Task<IActionResult> ReceivePaymentNotification([FromQuery] Dictionary<string, string> queryParams)
         {
-
-            await _listenerService.GenerateNotification(new NotificationDto
+            try
             {
-                OrderId = order_id,
-                Description = $"{status} AT {transaction_timestamp}",
-                Status = status,
-                TransactionId = transaction_id,
-                CustomerId = customer_id,
-                PaymentId = payment_id.ToString(),
-                PaymentType = payment_type,
-                TransactionTimestamp = transaction_timestamp,
-            });
+                string paymentType = queryParams.ContainsKey("payment_type") ? queryParams["payment_type"] : null;
+                string status = queryParams.ContainsKey("status") ? queryParams["status"] : null;
+                string orderId = queryParams.ContainsKey("order_id") ? queryParams["order_id"] : null;
+                string transactionId = queryParams.ContainsKey("transaction_id") ? queryParams["transaction_id"] : null;
+                string customerId = queryParams.ContainsKey("customer_id") ? queryParams["customer_id"] : null;
+                string paymentId = queryParams.ContainsKey("payment_id") ? queryParams["payment_id"] : null;
+                string transactionTimestampStr = queryParams.ContainsKey("transaction_timestamp") ? queryParams["transaction_timestamp"] : null;
 
-            return Ok();
+                DateTime transactionTimestamp;
+                if (!DateTime.TryParse(transactionTimestampStr, out transactionTimestamp))
+                {
+                    return BadRequest("Invalid transaction_timestamp format.");
+                }
+
+                await _listenerService.GenerateNotification(new NotificationDto
+                {
+                    OrderId = orderId,
+                    Description = $"{status} AT {transactionTimestamp}",
+                    Status = status,
+                    TransactionId = transactionId,
+                    CustomerId = customerId,
+                    PaymentId = paymentId,
+                    PaymentType = paymentType,
+                    TransactionTimestamp = transactionTimestamp,
+                });
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("debit")]

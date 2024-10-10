@@ -34,7 +34,7 @@ namespace Application.Services
                 return false;
             }
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"/user/callback/{transaction.SellerId}");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"{_userApiSettings.BaseUrl}/user/callback/{transaction.SellerId}");
 
             request.Headers.Add("X-API-KEY", _userApiSettings.TransactionApiKey);
 
@@ -69,14 +69,15 @@ namespace Application.Services
             transaction.PaidAt = DateTime.UtcNow;
             await _transactionRepository.UpdateAsync(transaction);
 
-            var notificationPayload = new
+            var notificationPayload = new NotificationClientDto
             {
-                id = transaction.Id,
-                paymentId = transaction.PaymentId,
-                orderId = transaction.OrderId,
-                status = notification.Status,
-                amount = transaction.Amount,
-                paidAt = transaction.PaidAt
+                Id = transaction.Id,
+                PaymentId = transaction.PaymentId,
+                OrderId = transaction.OrderId,
+                TransactionId = transaction.TransactionId,
+                Status = notification.Status,
+                Amount = transaction.Amount,
+                PaidAt = transaction.PaidAt
             };
 
             var jsonContent = new StringContent(JsonConvert.SerializeObject(notificationPayload), Encoding.UTF8, "application/json");
