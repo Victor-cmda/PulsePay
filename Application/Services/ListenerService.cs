@@ -69,13 +69,22 @@ namespace Application.Services
             transaction.PaidAt = DateTime.UtcNow;
             await _transactionRepository.UpdateAsync(transaction);
 
+            string StatusNotification = notification.Status switch
+            {
+                "PENDING" => "PENDING",
+                "APPROVED" => "PAID",
+                "ERROR" => "ERROR",
+                "RECEIVED" => "RECEIVED",
+                _ => "ERROR"
+            };
+
             var notificationPayload = new NotificationClientDto
             {
                 Id = transaction.Id,
                 PaymentId = transaction.PaymentId,
                 OrderId = transaction.OrderId,
                 TransactionId = transaction.TransactionId,
-                Status = notification.Status,
+                Status = StatusNotification,
                 Amount = transaction.Amount,
                 PaidAt = transaction.PaidAt
             };
