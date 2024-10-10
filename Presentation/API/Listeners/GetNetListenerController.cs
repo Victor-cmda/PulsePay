@@ -34,7 +34,10 @@ namespace Presentation.API
             [FromQuery] string receiver_name = null,
             [FromQuery] string receiver_cnpj = null,
             [FromQuery] string receiver_cpf = null,
-            [FromQuery] string description_detail = null)
+            [FromQuery] string description_detail = null,
+            [FromQuery] string payer_name = null,
+            [FromQuery] string payer_cnpj = null,
+            [FromQuery] string payer_cpf = null)
         {
 
             await _listenerService.GenerateNotification(new NotificationDto
