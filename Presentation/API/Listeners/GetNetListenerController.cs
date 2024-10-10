@@ -18,12 +18,11 @@ namespace Presentation.API
         }
 
         [HttpGet("pix")]
-        [HttpGet]
         public async Task<IActionResult> ReceivePaymentNotification(
             [FromQuery] string payment_type,
             [FromQuery] string customer_id,
             [FromQuery] string order_id,
-            [FromQuery] string payment_id,
+            [FromQuery] Guid payment_id,
             [FromQuery] int amount,
             [FromQuery] string status,
             [FromQuery] string transaction_id,
@@ -34,10 +33,7 @@ namespace Presentation.API
             [FromQuery] string receiver_name = null,
             [FromQuery] string receiver_cnpj = null,
             [FromQuery] string receiver_cpf = null,
-            [FromQuery] string description_detail = null,
-            [FromQuery] string payer_name = null,
-            [FromQuery] string payer_cnpj = null,
-            [FromQuery] string payer_cpf = null)
+            [FromQuery] string description_detail = null)
         {
 
             await _listenerService.GenerateNotification(new NotificationDto
@@ -47,7 +43,7 @@ namespace Presentation.API
                 Status = status,
                 TransactionId = transaction_id,
                 CustomerId = customer_id,
-                PaymentId = payment_id,
+                PaymentId = payment_id.ToString(),
                 PaymentType = payment_type,
                 TransactionTimestamp = transaction_timestamp,
             });
