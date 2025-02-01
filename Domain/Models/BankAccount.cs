@@ -1,45 +1,32 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Shared.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Domain.Models
 {
     public class BankAccount
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
-
-        [Required]
         public Guid SellerId { get; set; }
-
-        [Required]
-        [StringLength(50)]
         public string BankName { get; set; }
+        public string BankCode { get; set; }
+        public BankAccountType AccountType { get; set; }
 
-        [Required]
-        [StringLength(20)]
-        public string AccountType { get; set; } // Checking, Savings
+        // Campos específicos para TED
+        public string? AccountNumber { get; set; }
+        public string? BranchNumber { get; set; }
 
-        [Required]
-        [StringLength(20)]
-        public string AccountNumber { get; set; }
+        // Campos específicos para PIX
+        public string? PixKey { get; set; }
+        public PixKeyType? PixKeyType { get; set; }
 
-        [Required]
-        [StringLength(10)]
-        public string BranchNumber { get; set; }
-
-        [StringLength(20)]
-        public string? PIXKey { get; set; }
-
-        [StringLength(20)]
-        public string? PIXKeyType { get; set; } // CPF, CNPJ, EMAIL, PHONE, RANDOM
-
-        public bool IsDefault { get; set; }
-
-        public bool IsActive { get; set; }
-
+        public string DocumentNumber { get; set; }
+        public string AccountHolderName { get; set; }
+        public bool IsVerified { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime LastUpdatedAt { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
+        // Relacionamentos
+        public virtual ICollection<Withdraw> Withdraws { get; set; }
     }
 }
