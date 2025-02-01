@@ -133,8 +133,8 @@ namespace Application.Services
                     AccountType = withdraw.BankAccount.AccountType,
                     AccountNumber = withdraw.BankAccount.AccountNumber,
                     BranchNumber = withdraw.BankAccount.BranchNumber,
-                    PIXKeyType = withdraw.BankAccount.PIXKeyType,
-                    PIXKey = withdraw.BankAccount.PIXKey,
+                    PixKeyType = withdraw.BankAccount.PixKeyType,
+                    PixKey = withdraw.BankAccount.PixKey,
                 },
                 FailureReason = withdraw.FailureReason,
                 TransactionReceipt = withdraw.TransactionReceipt

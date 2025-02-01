@@ -90,15 +90,20 @@ namespace Infrastructure.Data
                 entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
                 entity.Property(e => e.SellerId).HasColumnName("SellerId").IsRequired();
                 entity.Property(e => e.BankName).HasColumnName("BankName").HasMaxLength(50).IsRequired();
-                entity.Property(e => e.AccountType).HasColumnName("AccountType").HasMaxLength(20).IsRequired();
-                entity.Property(e => e.AccountNumber).HasColumnName("AccountNumber").HasMaxLength(20).IsRequired();
-                entity.Property(e => e.BranchNumber).HasColumnName("BranchNumber").HasMaxLength(10).IsRequired();
-                entity.Property(e => e.PIXKey).HasColumnName("PIXKey").HasMaxLength(20);
-                entity.Property(e => e.PIXKeyType).HasColumnName("PIXKeyType").HasMaxLength(20);
-                entity.Property(e => e.IsDefault).HasColumnName("IsDefault").IsRequired();
-                entity.Property(e => e.IsActive).HasColumnName("IsActive").IsRequired();
+                entity.Property(e => e.BankCode).HasColumnName("BankCode").HasMaxLength(10).IsRequired();
+                entity.Property(e => e.AccountType).HasColumnName("AccountType").HasConversion<string>().HasMaxLength(20).IsRequired();
+                entity.Property(e => e.AccountNumber).HasColumnName("AccountNumber").HasMaxLength(20);entity.Property(e => e.BranchNumber).HasColumnName("BranchNumber").HasMaxLength(10);
+                entity.Property(e => e.PixKey).HasColumnName("PIXKey").HasMaxLength(100);
+                entity.Property(e => e.PixKeyType).HasColumnName("PIXKeyType").HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.DocumentNumber).HasColumnName("DocumentNumber").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.AccountHolderName).HasColumnName("AccountHolderName").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.IsVerified).HasColumnName("IsVerified").IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").IsRequired();
-                entity.Property(e => e.UpdatedAt).HasColumnName("UpdatedAt");
+                entity.Property(e => e.LastUpdatedAt).HasColumnName("LastUpdatedAt").IsRequired();
+                entity.HasMany(e => e.Withdraws).WithOne(w => w.BankAccount).HasForeignKey(w => w.BankAccountId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.BankCode, e.AccountNumber, e.BranchNumber }).HasName("IX_BankAccounts_AccountDetails");
+                entity.HasIndex(e => new { e.PixKey, e.PixKeyType }).HasName("IX_BankAccounts_PixKey").IsUnique().HasFilter("[PIXKey] IS NOT NULL AND [PIXKeyType] IS NOT NULL");
+                entity.HasIndex(e => e.SellerId).HasName("IX_BankAccounts_SellerId");
             });
         }
     }

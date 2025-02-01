@@ -132,10 +132,12 @@ builder.Services.AddTransient<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IWithdrawService, WithdrawService>();
+builder.Services.AddScoped<IBankAccountService, BankAccountService>();
 
 //Repository
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IWithdrawRepository, WithdrawRepository>();
+builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, K8PayAuthenticationService>();
