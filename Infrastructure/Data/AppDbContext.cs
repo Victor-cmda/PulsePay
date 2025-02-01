@@ -57,30 +57,30 @@ namespace Infrastructure.Data
             {
                 entity.ToTable("WalletTransactions");
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
-                entity.Property(e => e.WalletId).HasColumnName("WalletId").IsRequired();
-                entity.Property(e => e.SellerId).HasColumnName("SellerId").IsRequired();
-                entity.Property(e => e.Amount).HasColumnName("Amount").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.TransactionType).HasColumnName("TransactionType").HasMaxLength(20).IsRequired();
-                entity.Property(e => e.Status).HasColumnName("Status").HasMaxLength(20).IsRequired();
-                entity.Property(e => e.ReferenceId).HasColumnName("ReferenceId");
-                entity.Property(e => e.ReferenceType).HasColumnName("ReferenceType").HasMaxLength(50);
-                entity.Property(e => e.PreviousBalance).HasColumnName("PreviousBalance").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.NewBalance).HasColumnName("NewBalance").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").IsRequired();
+                entity.Property(e => e.Id).IsRequired();
+                entity.Property(e => e.WalletId).IsRequired();
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.Reference).HasMaxLength(100).IsRequired(false);
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.ProcessedAt).IsRequired(false);
+                entity.HasOne(e => e.Wallet).WithMany(w => w.Transactions).HasForeignKey(e => e.WalletId).OnDelete(DeleteBehavior.Restrict);
             });
+
 
             modelBuilder.Entity<Wallet>(entity =>
             {
                 entity.ToTable("Wallets");
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
-                entity.Property(e => e.SellerId).HasColumnName("SellerId").IsRequired();
-                entity.Property(e => e.AvailableBalance).HasColumnName("AvailableBalance").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.PendingBalance).HasColumnName("PendingBalance").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.TotalBalance).HasColumnName("TotalBalance").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.LastUpdateAt).HasColumnName("LastUpdateAt").IsRequired();
-                entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").IsRequired();
+                entity.Property(e => e.Id).ValueGeneratedOnAdd().IsRequired();
+                entity.Property(e => e.SellerId).IsRequired();
+                entity.Property(e => e.AvailableBalance).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.PendingBalance).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.TotalBalance).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.LastUpdateAt).IsRequired();
+                entity.Property(e => e.CreatedAt).IsRequired();
             });
 
             modelBuilder.Entity<BankAccount>(entity =>

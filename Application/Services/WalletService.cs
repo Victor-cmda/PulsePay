@@ -5,6 +5,7 @@ using Domain.Models;
 using Microsoft.Extensions.Logging;
 using Shared.Exceptions;
 using System.ComponentModel.DataAnnotations;
+using ValidationException = Shared.Exceptions.ValidationException;
 
 namespace Application.Services
 {

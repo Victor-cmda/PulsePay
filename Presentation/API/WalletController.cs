@@ -3,6 +3,7 @@ using Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Exceptions;
 using System.ComponentModel.DataAnnotations;
+using ValidationException = Shared.Exceptions.ValidationException;
 
 namespace Presentation.API
 {

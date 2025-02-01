@@ -24,5 +24,7 @@ namespace Domain.Models
         public DateTime LastUpdateAt { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public virtual ICollection<WalletTransaction> Transactions { get; set; }
     }
 }
