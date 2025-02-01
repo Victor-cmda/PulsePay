@@ -7,6 +7,7 @@ using Shared.Enums;
 using Shared.Exceptions;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
+using ValidationException = Shared.Exceptions.ValidationException;
 
 namespace Application.Services
 {
