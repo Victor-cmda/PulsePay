@@ -128,7 +128,12 @@ builder.Services.AddTransient<ITransactionRepository, TransactionRepository>();
 
 builder.Services.AddTransient<ITransactionService, TransactionService>();
 
+//Services
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+
+//Repository
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 
 builder.Services.AddScoped<IAuthenticationPaymentApiService, GetNetAuthenticationService>();
 builder.Services.AddScoped<IAuthenticationPaymentApiService, K8PayAuthenticationService>();
