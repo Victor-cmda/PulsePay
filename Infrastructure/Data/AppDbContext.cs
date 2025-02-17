@@ -26,9 +26,7 @@ namespace Infrastructure.Data
                 entity.Property(e => e.Amount).HasColumnName("Amount").HasColumnType("decimal(10,2)");
                 entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc)).IsRequired();
                 entity.Property(e => e.Status).HasColumnName("Status").HasMaxLength(20);
-                entity.Property(e => e.Details).HasColumnName("Details").HasConversion(
-                    v => v.ToString(),
-                    v => JObject.Parse(v));
+                entity.Property(e => e.Details).HasColumnName("Details").HasColumnType("jsonb");
             });
 
 
@@ -92,7 +90,7 @@ namespace Infrastructure.Data
                 entity.Property(e => e.BankName).HasColumnName("BankName").HasMaxLength(50).IsRequired();
                 entity.Property(e => e.BankCode).HasColumnName("BankCode").HasMaxLength(10).IsRequired();
                 entity.Property(e => e.AccountType).HasColumnName("AccountType").HasConversion<string>().HasMaxLength(20).IsRequired();
-                entity.Property(e => e.AccountNumber).HasColumnName("AccountNumber").HasMaxLength(20);entity.Property(e => e.BranchNumber).HasColumnName("BranchNumber").HasMaxLength(10);
+                entity.Property(e => e.AccountNumber).HasColumnName("AccountNumber").HasMaxLength(20); entity.Property(e => e.BranchNumber).HasColumnName("BranchNumber").HasMaxLength(10);
                 entity.Property(e => e.PixKey).HasColumnName("PIXKey").HasMaxLength(100);
                 entity.Property(e => e.PixKeyType).HasColumnName("PIXKeyType").HasConversion<string>().HasMaxLength(20);
                 entity.Property(e => e.DocumentNumber).HasColumnName("DocumentNumber").HasMaxLength(20).IsRequired();
@@ -102,7 +100,7 @@ namespace Infrastructure.Data
                 entity.Property(e => e.LastUpdatedAt).HasColumnName("LastUpdatedAt").IsRequired();
                 entity.HasMany(e => e.Withdraws).WithOne(w => w.BankAccount).HasForeignKey(w => w.BankAccountId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(e => new { e.BankCode, e.AccountNumber, e.BranchNumber }).HasName("IX_BankAccounts_AccountDetails");
-                entity.HasIndex(e => new { e.PixKey, e.PixKeyType }).HasName("IX_BankAccounts_PixKey").IsUnique().HasFilter("[PIXKey] IS NOT NULL AND [PIXKeyType] IS NOT NULL");
+                entity.HasIndex(e => new { e.PixKey, e.PixKeyType }).HasName("IX_BankAccounts_PixKey").IsUnique().HasFilter("\"PIXKey\" IS NOT NULL AND \"PIXKeyType\" IS NOT NULL");
                 entity.HasIndex(e => e.SellerId).HasName("IX_BankAccounts_SellerId");
             });
         }

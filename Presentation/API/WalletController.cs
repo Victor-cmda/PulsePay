@@ -23,8 +23,6 @@ namespace Presentation.API
         }
 
         [HttpGet("{sellerId}")]
-        [ProducesResponseType(typeof(WalletResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetWallet(Guid sellerId)
         {
             try
@@ -39,8 +37,6 @@ namespace Presentation.API
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(WalletResponseDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> CreateWallet(WalletCreateDto createDto)
         {
             try
@@ -55,8 +51,6 @@ namespace Presentation.API
         }
 
         [HttpPut("{sellerId}/balance")]
-        [ProducesResponseType(typeof(WalletResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateBalance(Guid sellerId, WalletUpdateDto updateDto)
         {
             try
@@ -71,8 +65,6 @@ namespace Presentation.API
         }
 
         [HttpPost("{sellerId}/add-funds")]
-        [ProducesResponseType(typeof(WalletResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AddFunds(Guid sellerId, [FromBody] decimal amount)
         {
             try
@@ -91,9 +83,6 @@ namespace Presentation.API
         }
 
         [HttpPost("{sellerId}/deduct-funds")]
-        [ProducesResponseType(typeof(WalletResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> DeductFunds(Guid sellerId, [FromBody] decimal amount)
         {
             try

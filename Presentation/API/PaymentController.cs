@@ -22,9 +22,9 @@ namespace Presentation.API
             _logger = logger;
         }
 
-        //[Authorize(Policy = "ClientPolicy")]
-        [HttpPost("pix")]
+        [Authorize(Policy = "ClientPolicy")]
         [ValidateSellerId]
+        [HttpPost("pix")]
         public async Task<IActionResult> GeneratePixPayment([FromBody] PaymentPixRequestDto paymentRequest)
         {
             try
@@ -46,9 +46,9 @@ namespace Presentation.API
             }
         }
 
-        //[Authorize(Policy = "ClientPolicy")]
-        [HttpPost("boleto")]
+        [Authorize(Policy = "ClientPolicy")]
         [ValidateSellerId]
+        [HttpPost("boleto")]
         public async Task<IActionResult> GenerateBoletoPayment([FromBody] PaymentBankSlipRequestDto paymentRequest)
         {
             try
@@ -69,6 +69,8 @@ namespace Presentation.API
             }
         }
 
+        [Authorize(Policy = "ClientPolicy")]
+        [ValidateSellerId]
         [HttpGet("boleto/{Id}/pdf")]
         public async Task<IActionResult> GetBoletoFilePdf([FromRoute] string Id)
         {
