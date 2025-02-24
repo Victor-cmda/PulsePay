@@ -8,6 +8,7 @@ using System;
 
 namespace Presentation.API
 {
+    [ApiExplorerSettings(IgnoreApi = true)]
     [ApiController]
     [Route("api/payment")]
     public class PaymentsController : ControllerBase

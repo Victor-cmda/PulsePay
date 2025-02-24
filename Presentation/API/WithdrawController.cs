@@ -1,10 +1,12 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Exceptions;
 
 namespace Presentation.API
 {
+    [Authorize(Policy = "UserPolicy")]
     [ApiController]
     [Route("api/[controller]")]
     public class WithdrawController : ControllerBase
@@ -21,8 +23,6 @@ namespace Presentation.API
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(WithdrawResponseDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> RequestWithdraw(WithdrawCreateDto createDto)
         {
             try
@@ -37,8 +37,6 @@ namespace Presentation.API
         }
 
         [HttpGet("{id}")]
-        [ProducesResponseType(typeof(WithdrawResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetWithdraw(Guid id)
         {
             try
@@ -53,7 +51,6 @@ namespace Presentation.API
         }
 
         [HttpGet("seller/{sellerId}")]
-        [ProducesResponseType(typeof(IEnumerable<WithdrawResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetWithdrawsBySeller(
             Guid sellerId,
             [FromQuery] int page = 1,
@@ -64,9 +61,6 @@ namespace Presentation.API
         }
 
         [HttpPut("{id}/process")]
-        [ProducesResponseType(typeof(WithdrawResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ProcessWithdraw(Guid id, WithdrawUpdateDto updateDto)
         {
             try
@@ -85,7 +79,6 @@ namespace Presentation.API
         }
 
         [HttpGet("summary/{sellerId}")]
-        [ProducesResponseType(typeof(WithdrawSummaryDto), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetWithdrawSummary(
             Guid sellerId,
             [FromQuery] DateTime startDate,
@@ -96,7 +89,6 @@ namespace Presentation.API
         }
 
         [HttpGet("pending")]
-        [ProducesResponseType(typeof(IEnumerable<WithdrawResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPendingWithdraws()
         {
             var pendingWithdraws = await _withdrawService.GetPendingWithdrawsAsync();

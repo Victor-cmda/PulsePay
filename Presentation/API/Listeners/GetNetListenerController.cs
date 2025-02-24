@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Presentation.API
 {
     [ApiController]
+    [ApiExplorerSettings(IgnoreApi = true)]
     [Route("api/getnet")]
     public class GetNetListenerController : ControllerBase
     {

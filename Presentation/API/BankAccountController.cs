@@ -3,7 +3,6 @@ using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Exceptions;
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using ValidationException = Shared.Exceptions.ValidationException;
 
@@ -11,7 +10,8 @@ namespace Presentation.API
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Policy = "UserPolicy")]
+
     public class BankAccountController : ControllerBase
     {
         private readonly IBankAccountService _bankAccountService;

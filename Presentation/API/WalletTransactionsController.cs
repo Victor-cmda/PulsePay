@@ -1,11 +1,13 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Enums;
 using Shared.Exceptions;
 
 namespace API.Controllers
 {
+    [Authorize(Policy = "UserPolicy")]
     [ApiController]
     [Route("api/[controller]")]
     public class WalletTransactionsController : ControllerBase
@@ -22,8 +24,6 @@ namespace API.Controllers
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(TransactionResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequest request)
         {
             try
@@ -58,8 +58,6 @@ namespace API.Controllers
         }
 
         [HttpGet("{transactionId}")]
-        [ProducesResponseType(typeof(TransactionResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetTransaction(Guid transactionId)
         {
             try
@@ -87,7 +85,6 @@ namespace API.Controllers
         }
 
         [HttpGet("wallet/{walletId}/balance")]
-        [ProducesResponseType(typeof(WalletBalanceResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBalance(Guid walletId)
         {
             var balance = await _transactionService.GetWalletBalanceAsync(walletId);
@@ -101,7 +98,6 @@ namespace API.Controllers
         }
 
         [HttpGet("wallet/{walletId}/history")]
-        [ProducesResponseType(typeof(TransactionHistoryResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetTransactionHistory(
             Guid walletId,
             [FromQuery] GetTransactionHistoryRequest request)
@@ -156,8 +152,6 @@ namespace API.Controllers
         }
 
         [HttpPut("{transactionId}/status")]
-        [ProducesResponseType(typeof(TransactionResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateTransactionStatus(
             Guid transactionId,
             [FromBody] UpdateTransactionStatusRequest request)
