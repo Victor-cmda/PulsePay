@@ -4,12 +4,34 @@ namespace Application.Interfaces
 {
     public interface IBankAccountService
     {
-        Task<BankAccountResponseDto> CreateBankAccountAsync(BankAccountCreateDto createDto);
-        Task<BankAccountResponseDto> UpdateBankAccountAsync(Guid id, BankAccountUpdateDto updateDto);
-        Task<BankAccountResponseDto> GetBankAccountAsync(Guid id);
-        Task<IEnumerable<BankAccountResponseDto>> GetSellerBankAccountsAsync(Guid sellerId);
-        Task<bool> DeleteBankAccountAsync(Guid id, Guid sellerId);
-        Task<BankAccountValidationDto> ValidateBankAccountAsync(BankAccountCreateDto createDto);
-        Task<bool> VerifyBankAccountAsync(Guid id);
+        Task<BankAccountResponseDto> CreateBankAccountAsync(
+            BankAccountCreateDto createDto,
+            CancellationToken cancellationToken = default);
+
+        Task<BankAccountResponseDto> UpdateBankAccountAsync(
+            Guid id,
+            BankAccountUpdateDto updateDto,
+            CancellationToken cancellationToken = default);
+
+        Task<BankAccountResponseDto> GetBankAccountAsync(
+            Guid id,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<BankAccountResponseDto>> GetSellerBankAccountsAsync(
+            Guid sellerId,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> DeleteBankAccountAsync(
+            Guid id,
+            Guid sellerId,
+            CancellationToken cancellationToken = default);
+
+        Task<BankAccountValidationDto> ValidateBankAccountAsync(
+            BankAccountCreateDto createDto,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> VerifyBankAccountAsync(
+            Guid id,
+            CancellationToken cancellationToken = default);
     }
 }

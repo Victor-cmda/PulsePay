@@ -5,7 +5,6 @@ using Domain.Models;
 using Microsoft.Extensions.Logging;
 using Shared.Enums;
 using Shared.Exceptions;
-using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using ValidationException = Shared.Exceptions.ValidationException;
 
@@ -24,24 +23,24 @@ namespace Application.Services
             _logger = logger;
         }
 
-        public async Task<BankAccountResponseDto> GetBankAccountAsync(Guid id)
+        public async Task<BankAccountResponseDto> GetBankAccountAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            var bankAccount = await _bankAccountRepository.GetByIdAsync(id);
+            var bankAccount = await _bankAccountRepository.GetByIdAsync(id, cancellationToken);
             if (bankAccount == null)
                 throw new NotFoundException($"Bank account with ID {id} not found");
 
             return MapToResponseDto(bankAccount);
         }
 
-        public async Task<IEnumerable<BankAccountResponseDto>> GetSellerBankAccountsAsync(Guid sellerId)
+        public async Task<IReadOnlyCollection<BankAccountResponseDto>> GetSellerBankAccountsAsync(Guid sellerId, CancellationToken cancellationToken = default)
         {
-            var bankAccounts = await _bankAccountRepository.GetBySellerIdAsync(sellerId);
-            return bankAccounts.Select(MapToResponseDto);
+            var bankAccounts = await _bankAccountRepository.GetBySellerIdAsync(sellerId, cancellationToken);
+            return bankAccounts.Select(MapToResponseDto).ToList().AsReadOnly();
         }
 
-        public async Task<BankAccountResponseDto> CreateBankAccountAsync(BankAccountCreateDto createDto)
+        public async Task<BankAccountResponseDto> CreateBankAccountAsync(BankAccountCreateDto createDto, CancellationToken cancellationToken = default)
         {
-            var validation = await ValidateBankAccountAsync(createDto);
+            var validation = await ValidateBankAccountAsync(createDto, cancellationToken);
             if (!validation.IsValid)
                 throw new ValidationException(string.Join(", ", validation.ValidationErrors));
 
@@ -51,10 +50,12 @@ namespace Application.Services
                 BankAccountType.TED => await _bankAccountRepository.ExistsByAccountNumberAsync(
                     createDto.BankCode,
                     createDto.AccountNumber,
-                    createDto.BranchNumber),
+                    createDto.BranchNumber,
+                    cancellationToken),
                 BankAccountType.PIX => await _bankAccountRepository.ExistsByPixKeyAsync(
                     createDto.PixKey,
-                    createDto.PixKeyType.Value),
+                    createDto.PixKeyType.Value,
+                    cancellationToken),
                 _ => false
             };
 
@@ -77,15 +78,15 @@ namespace Application.Services
                 IsVerified = false
             };
 
-            var created = await _bankAccountRepository.CreateAsync(bankAccount);
+            var created = await _bankAccountRepository.CreateAsync(bankAccount, cancellationToken);
             _logger.LogInformation($"Bank account created: {created.Id} for seller {created.SellerId}");
 
             return MapToResponseDto(created);
         }
 
-        public async Task<BankAccountResponseDto> UpdateBankAccountAsync(Guid id, BankAccountUpdateDto updateDto)
+        public async Task<BankAccountResponseDto> UpdateBankAccountAsync(Guid id, BankAccountUpdateDto updateDto, CancellationToken cancellationToken = default)
         {
-            var bankAccount = await _bankAccountRepository.GetByIdAsync(id);
+            var bankAccount = await _bankAccountRepository.GetByIdAsync(id, cancellationToken);
             if (bankAccount == null)
                 throw new NotFoundException($"Bank account with ID {id} not found");
 
@@ -129,26 +130,26 @@ namespace Application.Services
                     break;
             }
 
-            var updated = await _bankAccountRepository.UpdateAsync(bankAccount);
+            var updated = await _bankAccountRepository.UpdateAsync(bankAccount, cancellationToken);
             _logger.LogInformation($"Bank account updated: {updated.Id}");
 
             return MapToResponseDto(updated);
         }
 
-        public async Task<bool> DeleteBankAccountAsync(Guid id, Guid sellerId)
+        public async Task<bool> DeleteBankAccountAsync(Guid id, Guid sellerId, CancellationToken cancellationToken = default)
         {
-            var isOwner = await _bankAccountRepository.IsOwnerAsync(id, sellerId);
+            var isOwner = await _bankAccountRepository.IsOwnerAsync(id, sellerId, cancellationToken);
             if (!isOwner)
-                throw new UnauthorizedAccessException("You are not authorized to delete this bank account");
+                throw new UnauthorizedException("You are not authorized to delete this bank account");
 
-            var result = await _bankAccountRepository.DeleteAsync(id);
+            var result = await _bankAccountRepository.DeleteAsync(id, cancellationToken);
             if (result)
                 _logger.LogInformation($"Bank account deleted: {id}");
 
             return result;
         }
 
-        public async Task<BankAccountValidationDto> ValidateBankAccountAsync(BankAccountCreateDto createDto)
+        public async Task<BankAccountValidationDto> ValidateBankAccountAsync(BankAccountCreateDto createDto, CancellationToken cancellationToken = default)
         {
             var validation = new BankAccountValidationDto { IsValid = true };
 
@@ -204,14 +205,14 @@ namespace Application.Services
             return validation;
         }
 
-        public async Task<bool> VerifyBankAccountAsync(Guid id)
+        public async Task<bool> VerifyBankAccountAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            var bankAccount = await _bankAccountRepository.GetByIdAsync(id);
+            var bankAccount = await _bankAccountRepository.GetByIdAsync(id, cancellationToken);
             if (bankAccount == null)
                 throw new NotFoundException($"Bank account with ID {id} not found");
 
             bankAccount.IsVerified = true;
-            await _bankAccountRepository.UpdateAsync(bankAccount);
+            await _bankAccountRepository.UpdateAsync(bankAccount, cancellationToken);
 
             _logger.LogInformation($"Bank account verified: {id}");
             return true;

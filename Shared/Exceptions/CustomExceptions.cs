@@ -1,5 +1,8 @@
 ﻿namespace Shared.Exceptions
 {
+    public record ErrorResponse(string Message);
+    public record ValidationErrorResponse(IEnumerable<string> Errors);
+
     public class NotFoundException : Exception
     {
         public NotFoundException(string message) : base(message) { }
@@ -24,4 +27,5 @@
     {
         public ValidationException(string message) : base(message) { }
     }
+
 }

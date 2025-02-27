@@ -15,68 +15,65 @@ namespace Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<BankAccount> GetByIdAsync(Guid id)
+        public async Task<BankAccount> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.BankAccounts
-                .FirstOrDefaultAsync(b => b.Id == id);
+                .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
         }
 
-        public async Task<IEnumerable<BankAccount>> GetBySellerIdAsync(Guid sellerId)
+        public async Task<IEnumerable<BankAccount>> GetBySellerIdAsync(Guid sellerId, CancellationToken cancellationToken = default)
         {
             return await _context.BankAccounts
                 .Where(b => b.SellerId == sellerId)
                 .OrderBy(b => b.BankName)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<BankAccount> CreateAsync(BankAccount bankAccount)
+        public async Task<BankAccount> CreateAsync(BankAccount bankAccount, CancellationToken cancellationToken = default)
         {
             bankAccount.CreatedAt = DateTime.UtcNow;
             bankAccount.LastUpdatedAt = DateTime.UtcNow;
-
             _context.BankAccounts.Add(bankAccount);
-            await _context.SaveChangesAsync();
-
+            await _context.SaveChangesAsync(cancellationToken);
             return bankAccount;
         }
 
-        public async Task<BankAccount> UpdateAsync(BankAccount bankAccount)
+        public async Task<BankAccount> UpdateAsync(BankAccount bankAccount, CancellationToken cancellationToken = default)
         {
             bankAccount.LastUpdatedAt = DateTime.UtcNow;
-
             _context.BankAccounts.Update(bankAccount);
-            await _context.SaveChangesAsync();
-
+            await _context.SaveChangesAsync(cancellationToken);
             return bankAccount;
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            var bankAccount = await _context.BankAccounts.FindAsync(id);
+            var bankAccount = await _context.BankAccounts.FindAsync(new object[] { id }, cancellationToken);
             if (bankAccount == null)
                 return false;
 
             _context.BankAccounts.Remove(bankAccount);
-            await _context.SaveChangesAsync();
-
+            await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
 
-        public async Task<bool> ExistsByAccountNumberAsync(string bankCode, string accountNumber, string branchNumber)
+        public async Task<bool> ExistsByAccountNumberAsync(string bankCode, string accountNumber, string branchNumber, CancellationToken cancellationToken = default)
         {
             return await _context.BankAccounts.AnyAsync(b =>
                 b.BankCode == bankCode &&
                 b.AccountNumber == accountNumber &&
-                b.BranchNumber == branchNumber);
+                b.BranchNumber == branchNumber,
+                cancellationToken);
         }
 
-        public async Task<bool> IsOwnerAsync(Guid id, Guid sellerId)
+        public async Task<bool> IsOwnerAsync(Guid id, Guid sellerId, CancellationToken cancellationToken = default)
         {
             return await _context.BankAccounts.AnyAsync(b =>
-                b.Id == id && b.SellerId == sellerId);
+                b.Id == id && b.SellerId == sellerId,
+                cancellationToken);
         }
 
-        public async Task<bool> ExistsByPixKeyAsync(string pixKey, PixKeyType pixKeyType)
+        public async Task<bool> ExistsByPixKeyAsync(string pixKey, PixKeyType pixKeyType, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(pixKey))
                 return false;
@@ -85,7 +82,8 @@ namespace Infrastructure.Repositories
                 .AnyAsync(b =>
                     b.PixKey == pixKey &&
                     b.PixKeyType == pixKeyType &&
-                    b.AccountType == BankAccountType.PIX);
+                    b.AccountType == BankAccountType.PIX,
+                    cancellationToken);
         }
     }
 }

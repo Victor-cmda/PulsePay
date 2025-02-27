@@ -5,13 +5,20 @@ namespace Domain.Interfaces
 {
     public interface IBankAccountRepository
     {
-        Task<BankAccount> GetByIdAsync(Guid id);
-        Task<IEnumerable<BankAccount>> GetBySellerIdAsync(Guid sellerId);
-        Task<BankAccount> CreateAsync(BankAccount bankAccount);
-        Task<BankAccount> UpdateAsync(BankAccount bankAccount);
-        Task<bool> DeleteAsync(Guid id);
-        Task<bool> ExistsByAccountNumberAsync(string bankCode, string accountNumber, string branchNumber);
-        Task<bool> ExistsByPixKeyAsync(string pixKey, PixKeyType pixKeyType);
-        Task<bool> IsOwnerAsync(Guid id, Guid sellerId);
+        Task<BankAccount> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+        Task<IEnumerable<BankAccount>> GetBySellerIdAsync(Guid sellerId, CancellationToken cancellationToken = default);
+
+        Task<BankAccount> CreateAsync(BankAccount bankAccount, CancellationToken cancellationToken = default);
+
+        Task<BankAccount> UpdateAsync(BankAccount bankAccount, CancellationToken cancellationToken = default);
+
+        Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+        Task<bool> ExistsByAccountNumberAsync(string bankCode, string accountNumber, string branchNumber, CancellationToken cancellationToken = default);
+
+        Task<bool> ExistsByPixKeyAsync(string pixKey, PixKeyType pixKeyType, CancellationToken cancellationToken = default);
+
+        Task<bool> IsOwnerAsync(Guid id, Guid sellerId, CancellationToken cancellationToken = default);
     }
 }
