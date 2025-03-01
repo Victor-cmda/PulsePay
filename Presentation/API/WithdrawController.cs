@@ -8,7 +8,7 @@ namespace Presentation.API
 {
     [Authorize(Policy = "UserPolicy")]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/withdraw")]
     public class WithdrawController : ControllerBase
     {
         private readonly IWithdrawService _withdrawService;

@@ -1,12 +1,16 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
+using Application.Validators;
 using Domain.Interfaces;
 using Domain.Models;
+using FluentValidation;
 using Microsoft.Extensions.Logging;
 using Shared.Enums;
 using Shared.Exceptions;
-using System.Text.RegularExpressions;
-using ValidationException = Shared.Exceptions.ValidationException;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using ValidationException = FluentValidation.ValidationException;
 
 namespace Application.Services
 {
@@ -14,13 +18,19 @@ namespace Application.Services
     {
         private readonly IBankAccountRepository _bankAccountRepository;
         private readonly ILogger<BankAccountService> _logger;
+        private readonly IValidator<BankAccountCreateDto> _createValidator;
+        private readonly IValidator<BankAccountUpdateDto> _updateValidator;
 
         public BankAccountService(
             IBankAccountRepository bankAccountRepository,
-            ILogger<BankAccountService> logger)
+            ILogger<BankAccountService> logger,
+            IValidator<BankAccountCreateDto> createValidator,
+            IValidator<BankAccountUpdateDto> updateValidator)
         {
             _bankAccountRepository = bankAccountRepository;
             _logger = logger;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
         public async Task<BankAccountResponseDto> GetBankAccountAsync(Guid id, CancellationToken cancellationToken = default)
@@ -40,9 +50,12 @@ namespace Application.Services
 
         public async Task<BankAccountResponseDto> CreateBankAccountAsync(BankAccountCreateDto createDto, CancellationToken cancellationToken = default)
         {
-            var validation = await ValidateBankAccountAsync(createDto, cancellationToken);
-            if (!validation.IsValid)
-                throw new ValidationException(string.Join(", ", validation.ValidationErrors));
+            // Executar validação usando FluentValidation
+            var validationResult = await _createValidator.ValidateAsync(createDto, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                throw new ValidationException(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
+            }
 
             // Verificar duplicidade baseada no tipo de conta
             bool exists = createDto.AccountType switch
@@ -79,13 +92,20 @@ namespace Application.Services
             };
 
             var created = await _bankAccountRepository.CreateAsync(bankAccount, cancellationToken);
-            _logger.LogInformation($"Bank account created: {created.Id} for seller {created.SellerId}");
+            _logger.LogInformation("Bank account created: {Id} for seller {SellerId}", created.Id, created.SellerId);
 
             return MapToResponseDto(created);
         }
 
         public async Task<BankAccountResponseDto> UpdateBankAccountAsync(Guid id, BankAccountUpdateDto updateDto, CancellationToken cancellationToken = default)
         {
+            // Executar validação usando FluentValidation
+            var validationResult = await _updateValidator.ValidateAsync(updateDto, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                throw new ValidationException(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
+            }
+
             var bankAccount = await _bankAccountRepository.GetByIdAsync(id, cancellationToken);
             if (bankAccount == null)
                 throw new NotFoundException($"Bank account with ID {id} not found");
@@ -100,30 +120,32 @@ namespace Application.Services
             if (!string.IsNullOrEmpty(updateDto.AccountHolderName))
                 bankAccount.AccountHolderName = updateDto.AccountHolderName;
 
+            if (!string.IsNullOrEmpty(updateDto.DocumentNumber))
+                bankAccount.DocumentNumber = updateDto.DocumentNumber;
+
             // Atualizar campos específicos baseado no tipo de conta
             switch (bankAccount.AccountType)
             {
                 case BankAccountType.TED:
                     if (!string.IsNullOrEmpty(updateDto.AccountNumber))
-                    {
-                        if (!IsValidAccountNumber(updateDto.AccountNumber))
-                            throw new ValidationException("Invalid account number format");
                         bankAccount.AccountNumber = updateDto.AccountNumber;
-                    }
 
                     if (!string.IsNullOrEmpty(updateDto.BranchNumber))
-                    {
-                        if (!IsValidBranchNumber(updateDto.BranchNumber))
-                            throw new ValidationException("Invalid branch number format");
                         bankAccount.BranchNumber = updateDto.BranchNumber;
-                    }
                     break;
 
                 case BankAccountType.PIX:
                     if (!string.IsNullOrEmpty(updateDto.PixKey))
                     {
-                        if (!IsValidPixKey(updateDto.PixKey, updateDto.PixKeyType ?? bankAccount.PixKeyType))
-                            throw new ValidationException("Invalid PIX key format");
+                        // Verificar se já existe outro registro com a mesma chave PIX
+                        if (await _bankAccountRepository.ExistsByPixKeyAsync(
+                            updateDto.PixKey,
+                            updateDto.PixKeyType ?? bankAccount.PixKeyType.Value,
+                            cancellationToken))
+                        {
+                            throw new ConflictException("PIX key already registered with another account");
+                        }
+
                         bankAccount.PixKey = updateDto.PixKey;
                         bankAccount.PixKeyType = updateDto.PixKeyType ?? bankAccount.PixKeyType;
                     }
@@ -131,7 +153,7 @@ namespace Application.Services
             }
 
             var updated = await _bankAccountRepository.UpdateAsync(bankAccount, cancellationToken);
-            _logger.LogInformation($"Bank account updated: {updated.Id}");
+            _logger.LogInformation("Bank account updated: {Id}", updated.Id);
 
             return MapToResponseDto(updated);
         }
@@ -144,7 +166,7 @@ namespace Application.Services
 
             var result = await _bankAccountRepository.DeleteAsync(id, cancellationToken);
             if (result)
-                _logger.LogInformation($"Bank account deleted: {id}");
+                _logger.LogInformation("Bank account deleted: {Id}", id);
 
             return result;
         }
@@ -153,55 +175,17 @@ namespace Application.Services
         {
             var validation = new BankAccountValidationDto { IsValid = true };
 
-            // Validações comuns
-            if (!IsValidDocument(createDto.DocumentNumber))
-                validation.ValidationErrors.Add("Invalid document number");
+            // Usar FluentValidation para validar o DTO
+            var validationResult = await _createValidator.ValidateAsync(createDto, cancellationToken);
 
-            if (string.IsNullOrEmpty(createDto.BankCode) || !IsValidBankCode(createDto.BankCode))
-                validation.ValidationErrors.Add("Invalid bank code");
-
-            if (string.IsNullOrEmpty(createDto.BankName))
-                validation.ValidationErrors.Add("Bank name is required");
-
-            if (string.IsNullOrEmpty(createDto.AccountHolderName))
-                validation.ValidationErrors.Add("Account holder name is required");
-
-            // Validações específicas por tipo de conta
-            switch (createDto.AccountType)
+            if (!validationResult.IsValid)
             {
-                case BankAccountType.TED:
-                    if (string.IsNullOrEmpty(createDto.AccountNumber) ||
-                        string.IsNullOrEmpty(createDto.BranchNumber))
-                    {
-                        validation.ValidationErrors.Add("Account number and branch are required for TED");
-                    }
-
-                    if (!IsValidAccountNumber(createDto.AccountNumber))
-                        validation.ValidationErrors.Add("Invalid account number");
-
-                    if (!IsValidBranchNumber(createDto.BranchNumber))
-                        validation.ValidationErrors.Add("Invalid branch number");
-                    break;
-
-                case BankAccountType.PIX:
-                    if (string.IsNullOrEmpty(createDto.PixKey))
-                    {
-                        validation.ValidationErrors.Add("PIX key is required for PIX type accounts");
-                    }
-
-                    if (!createDto.PixKeyType.HasValue)
-                    {
-                        validation.ValidationErrors.Add("PIX key type is required");
-                    }
-
-                    if (!IsValidPixKey(createDto.PixKey, createDto.PixKeyType))
-                    {
-                        validation.ValidationErrors.Add("Invalid PIX key format");
-                    }
-                    break;
+                validation.IsValid = false;
+                validation.ValidationErrors = validationResult.Errors
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
             }
 
-            validation.IsValid = !validation.ValidationErrors.Any();
             return validation;
         }
 
@@ -214,7 +198,7 @@ namespace Application.Services
             bankAccount.IsVerified = true;
             await _bankAccountRepository.UpdateAsync(bankAccount, cancellationToken);
 
-            _logger.LogInformation($"Bank account verified: {id}");
+            _logger.LogInformation("Bank account verified: {Id}", id);
             return true;
         }
 
@@ -237,160 +221,6 @@ namespace Application.Services
                 CreatedAt = bankAccount.CreatedAt,
                 LastUpdatedAt = bankAccount.LastUpdatedAt
             };
-        }
-
-        private bool IsValidDocument(string document)
-        {
-            document = new string(document.Where(char.IsDigit).ToArray());
-
-            return document.Length == 11 ? IsCpf(document) : IsCnpj(document);
-        }
-
-        private bool IsCpf(string cpf)
-        {
-            if (string.IsNullOrEmpty(cpf) || cpf.Length != 11)
-                return false;
-
-            // Validação do CPF
-            int[] multiplicador1 = new int[9] { 10, 9, 8, 7, 6, 5, 4, 3, 2 };
-            int[] multiplicador2 = new int[10] { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2 };
-
-            cpf = cpf.Trim().Replace(".", "").Replace("-", "");
-            if (cpf.Length != 11)
-                return false;
-
-            string tempCpf = cpf.Substring(0, 9);
-            int soma = 0;
-
-            for (int i = 0; i < 9; i++)
-                soma += int.Parse(tempCpf[i].ToString()) * multiplicador1[i];
-
-            int resto = soma % 11;
-            if (resto < 2)
-                resto = 0;
-            else
-                resto = 11 - resto;
-
-            string digito = resto.ToString();
-            tempCpf = tempCpf + digito;
-            soma = 0;
-            for (int i = 0; i < 10; i++)
-                soma += int.Parse(tempCpf[i].ToString()) * multiplicador2[i];
-
-            resto = soma % 11;
-            if (resto < 2)
-                resto = 0;
-            else
-                resto = 11 - resto;
-
-            digito = digito + resto.ToString();
-
-            return cpf.EndsWith(digito);
-        }
-
-        private bool IsCnpj(string cnpj)
-        {
-            if (string.IsNullOrEmpty(cnpj) || cnpj.Length != 14)
-                return false;
-
-            // Validação do CNPJ
-            int[] multiplicador1 = new int[12] { 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
-            int[] multiplicador2 = new int[13] { 6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
-
-            cnpj = cnpj.Trim().Replace(".", "").Replace("-", "").Replace("/", "");
-            if (cnpj.Length != 14)
-                return false;
-
-            string tempCnpj = cnpj.Substring(0, 12);
-            int soma = 0;
-
-            for (int i = 0; i < 12; i++)
-                soma += int.Parse(tempCnpj[i].ToString()) * multiplicador1[i];
-
-            int resto = (soma % 11);
-            if (resto < 2)
-                resto = 0;
-            else
-                resto = 11 - resto;
-
-            string digito = resto.ToString();
-            tempCnpj = tempCnpj + digito;
-            soma = 0;
-            for (int i = 0; i < 13; i++)
-                soma += int.Parse(tempCnpj[i].ToString()) * multiplicador2[i];
-
-            resto = (soma % 11);
-            if (resto < 2)
-                resto = 0;
-            else
-                resto = 11 - resto;
-
-            digito = digito + resto.ToString();
-
-            return cnpj.EndsWith(digito);
-        }
-
-        private bool IsValidBankCode(string bankCode)
-        {
-            return !string.IsNullOrEmpty(bankCode) &&
-                   bankCode.Length == 3 &&
-                   bankCode.All(char.IsDigit);
-        }
-
-        private bool IsValidAccountNumber(string accountNumber)
-        {
-            return !string.IsNullOrEmpty(accountNumber) &&
-                   accountNumber.Length <= 20 &&
-                   Regex.IsMatch(accountNumber, @"^\d+(-[\dxX])?$");
-        }
-
-        private bool IsValidBranchNumber(string branchNumber)
-        {
-            return !string.IsNullOrEmpty(branchNumber) &&
-                   branchNumber.Length <= 10 &&
-                   Regex.IsMatch(branchNumber, @"^\d+(-[\dxX])?$");
-        }
-
-        private bool IsValidPixKey(string pixKey, PixKeyType? pixKeyType)
-        {
-            if (string.IsNullOrEmpty(pixKey) || !pixKeyType.HasValue)
-                return false;
-
-            return pixKeyType switch
-            {
-                PixKeyType.CPF => IsCpf(pixKey),
-                PixKeyType.CNPJ => IsCnpj(pixKey),
-                PixKeyType.EMAIL => IsValidEmail(pixKey),
-                PixKeyType.PHONE => IsValidPhone(pixKey),
-                PixKeyType.RANDOM => IsValidRandomKey(pixKey),
-                _ => false
-            };
-        }
-
-        private bool IsValidEmail(string email)
-        {
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private bool IsValidPhone(string phone)
-        {
-            // Formato: +55DDD999999999
-            return Regex.IsMatch(phone, @"^\+55\d{11}$");
-        }
-
-        private bool IsValidRandomKey(string key)
-        {
-            // Chave aleatória do PIX tem 32 caracteres
-            return key.Length == 32 &&
-                   Regex.IsMatch(key, @"^[a-zA-Z0-9]+$");
         }
     }
 }
