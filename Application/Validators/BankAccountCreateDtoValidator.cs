@@ -15,7 +15,6 @@ namespace Application.Validators
             _documentValidator = documentValidator;
             _pixKeyValidator = pixKeyValidator;
 
-            // Validações comuns
             RuleFor(x => x.BankName)
                 .NotEmpty().WithMessage("Bank name is required")
                 .MaximumLength(50).WithMessage("Bank name must not exceed 50 characters");
@@ -64,22 +63,30 @@ namespace Application.Validators
         private bool IsValidBankCode(string bankCode)
         {
             return !string.IsNullOrEmpty(bankCode) &&
-                   bankCode.Length == 3 &&
+                   bankCode.Length >= 3 && bankCode.Length <= 5 &&
                    bankCode.All(char.IsDigit);
         }
 
         private bool IsValidAccountNumber(string accountNumber)
         {
-            return !string.IsNullOrEmpty(accountNumber) &&
-                   accountNumber.Length <= 20 &&
-                   Regex.IsMatch(accountNumber, @"^\d+(-[\dxX])?$");
+            if (string.IsNullOrEmpty(accountNumber))
+                return false;
+
+            var cleanAccountNumber = new string(accountNumber.Where(c => char.IsDigit(c) || c == '-' || c == 'X' || c == 'x').ToArray());
+
+            return cleanAccountNumber.Length <= 20 &&
+                   Regex.IsMatch(cleanAccountNumber, @"^\d+(-[\dxX])?$");
         }
 
         private bool IsValidBranchNumber(string branchNumber)
         {
-            return !string.IsNullOrEmpty(branchNumber) &&
-                   branchNumber.Length <= 10 &&
-                   Regex.IsMatch(branchNumber, @"^\d+(-[\dxX])?$");
+            if (string.IsNullOrEmpty(branchNumber))
+                return false;
+
+            var cleanBranchNumber = new string(branchNumber.Where(c => char.IsDigit(c) || c == '-' || c == 'X' || c == 'x').ToArray());
+
+            return cleanBranchNumber.Length <= 10 &&
+                   Regex.IsMatch(cleanBranchNumber, @"^\d+(-[\dxX])?$");
         }
     }
 
@@ -272,13 +279,27 @@ namespace Application.Validators
             if (string.IsNullOrEmpty(pixKey) || !pixKeyType.HasValue)
                 return false;
 
+            string cleanPixKey = pixKey;
+
+            if (pixKeyType == PixKeyType.CPF || pixKeyType == PixKeyType.CNPJ)
+            {
+                cleanPixKey = new string(pixKey.Where(char.IsDigit).ToArray());
+            }
+            else if (pixKeyType == PixKeyType.PHONE)
+            {
+                if (!pixKey.StartsWith("+55"))
+                    return false;
+
+                cleanPixKey = pixKey;
+            }
+
             return pixKeyType switch
             {
-                PixKeyType.CPF => _documentValidator.IsCpf(pixKey),
-                PixKeyType.CNPJ => _documentValidator.IsCnpj(pixKey),
-                PixKeyType.EMAIL => IsValidEmail(pixKey),
-                PixKeyType.PHONE => IsValidPhone(pixKey),
-                PixKeyType.RANDOM => IsValidRandomKey(pixKey),
+                PixKeyType.CPF => _documentValidator.IsCpf(cleanPixKey),
+                PixKeyType.CNPJ => _documentValidator.IsCnpj(cleanPixKey),
+                PixKeyType.EMAIL => IsValidEmail(cleanPixKey),
+                PixKeyType.PHONE => IsValidPhone(cleanPixKey),
+                PixKeyType.RANDOM => IsValidRandomKey(cleanPixKey),
                 _ => false
             };
         }
@@ -298,13 +319,16 @@ namespace Application.Validators
 
         public bool IsValidPhone(string phone)
         {
-            // Formato: +55DDD999999999
-            return Regex.IsMatch(phone, @"^\+55\d{11}$");
+            if (!phone.StartsWith("+55"))
+                return false;
+
+            string digits = phone.Substring(3);
+
+            return digits.Length == 11 && digits.All(char.IsDigit);
         }
 
         public bool IsValidRandomKey(string key)
         {
-            // Chave aleatória do PIX tem 32 caracteres
             return key.Length == 32 &&
                    Regex.IsMatch(key, @"^[a-zA-Z0-9]+$");
         }

@@ -50,14 +50,14 @@ namespace Application.Services
 
         public async Task<BankAccountResponseDto> CreateBankAccountAsync(BankAccountCreateDto createDto, CancellationToken cancellationToken = default)
         {
-            // Executar validação usando FluentValidation
+            createDto = NormalizeCreateDto(createDto);
+
             var validationResult = await _createValidator.ValidateAsync(createDto, cancellationToken);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException(string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage)));
             }
 
-            // Verificar duplicidade baseada no tipo de conta
             bool exists = createDto.AccountType switch
             {
                 BankAccountType.TED => await _bankAccountRepository.ExistsByAccountNumberAsync(
@@ -99,7 +99,6 @@ namespace Application.Services
 
         public async Task<BankAccountResponseDto> UpdateBankAccountAsync(Guid id, BankAccountUpdateDto updateDto, CancellationToken cancellationToken = default)
         {
-            // Executar validação usando FluentValidation
             var validationResult = await _updateValidator.ValidateAsync(updateDto, cancellationToken);
             if (!validationResult.IsValid)
             {
@@ -110,7 +109,6 @@ namespace Application.Services
             if (bankAccount == null)
                 throw new NotFoundException($"Bank account with ID {id} not found");
 
-            // Atualizar campos comuns
             if (!string.IsNullOrEmpty(updateDto.BankName))
                 bankAccount.BankName = updateDto.BankName;
 
@@ -175,7 +173,6 @@ namespace Application.Services
         {
             var validation = new BankAccountValidationDto { IsValid = true };
 
-            // Usar FluentValidation para validar o DTO
             var validationResult = await _createValidator.ValidateAsync(createDto, cancellationToken);
 
             if (!validationResult.IsValid)
@@ -222,5 +219,40 @@ namespace Application.Services
                 LastUpdatedAt = bankAccount.LastUpdatedAt
             };
         }
+
+        private BankAccountCreateDto NormalizeCreateDto(BankAccountCreateDto dto)
+        {
+            var normalized = new BankAccountCreateDto
+            {
+                SellerId = dto.SellerId,
+                BankName = dto.BankName,
+                BankCode = dto.BankCode,
+                AccountType = dto.AccountType,
+                AccountHolderName = dto.AccountHolderName,
+                DocumentNumber = new string(dto.DocumentNumber.Where(char.IsDigit).ToArray())
+            };
+
+            if (dto.AccountType == BankAccountType.TED)
+            {
+                normalized.AccountNumber = new string(dto.AccountNumber.Where(c => char.IsDigit(c) || c == '-' || c == 'X' || c == 'x').ToArray());
+                normalized.BranchNumber = new string(dto.BranchNumber.Where(c => char.IsDigit(c) || c == '-' || c == 'X' || c == 'x').ToArray());
+            }
+            else if (dto.AccountType == BankAccountType.PIX)
+            {
+                normalized.PixKeyType = dto.PixKeyType;
+
+                if (dto.PixKeyType == PixKeyType.CPF || dto.PixKeyType == PixKeyType.CNPJ)
+                {
+                    normalized.PixKey = new string(dto.PixKey.Where(char.IsDigit).ToArray());
+                }
+                else
+                {
+                    normalized.PixKey = dto.PixKey;
+                }
+            }
+
+            return normalized;
+        }
+
     }
 }

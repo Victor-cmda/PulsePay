@@ -1,9 +1,8 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
-using Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Shared.Exceptions;
 
 namespace Presentation.API
 {
@@ -29,14 +28,16 @@ namespace Presentation.API
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<BankAccountResponseDto>> GetBankAccount(Guid id, CancellationToken cancellationToken = default)
         {
-            var bankAccount = await _bankAccountService.GetBankAccountAsync(id, cancellationToken);
-
-            if (!await IsBankAccountOwnerOrAdmin(bankAccount.SellerId))
+            try
             {
-                return Forbid();
+                var bankAccount = await _bankAccountService.GetBankAccountAsync(id, cancellationToken);
+                return Ok(bankAccount);
             }
-
-            return Ok(bankAccount);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving bank account with ID {BankAccountId}", id);
+                return StatusCode(500, "An error occurred while retrieving the bank account.");
+            }
         }
 
         [HttpGet("seller/{sellerId:guid}")]
@@ -45,76 +46,94 @@ namespace Presentation.API
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<IEnumerable<BankAccountResponseDto>>> GetSellerBankAccounts(Guid sellerId, CancellationToken cancellationToken = default)
         {
-            if (!await IsBankAccountOwnerOrAdmin(sellerId))
+            try
             {
-                return Forbid();
+                var bankAccounts = await _bankAccountService.GetSellerBankAccountsAsync(sellerId, cancellationToken);
+                return Ok(bankAccounts);
             }
-
-            var bankAccounts = await _bankAccountService.GetSellerBankAccountsAsync(sellerId, cancellationToken);
-            return Ok(bankAccounts);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving bank accounts for seller with ID {SellerId}", sellerId);
+                return StatusCode(500, "An error occurred while retrieving the bank accounts.");
+            }
         }
 
         [HttpPost]
         [ProducesResponseType(typeof(BankAccountResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<BankAccountResponseDto>> CreateBankAccount([FromBody] BankAccountCreateDto createDto, CancellationToken cancellationToken = default)
         {
-            if (!await IsBankAccountOwnerOrAdmin(createDto.SellerId))
+            try
             {
-                return Forbid();
+                var bankAccount = await _bankAccountService.CreateBankAccountAsync(createDto, cancellationToken);
+                return StatusCode(201, bankAccount);
             }
-
-            var bankAccount = await _bankAccountService.CreateBankAccountAsync(createDto, cancellationToken);
-
-            return Ok(bankAccount);
+            catch (ConflictException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating bank account for seller {SellerId}", createDto.SellerId);
+                return StatusCode(500, "An error occurred while creating the bank account.");
+            }
         }
 
         [HttpPut("{id:guid}")]
         [ProducesResponseType(typeof(BankAccountResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<BankAccountResponseDto>> UpdateBankAccount(Guid id, [FromBody] BankAccountUpdateDto updateDto, CancellationToken cancellationToken = default)
         {
-            var bankAccount = await _bankAccountService.GetBankAccountAsync(id, cancellationToken);
-
-            if (!await IsBankAccountOwnerOrAdmin(bankAccount.SellerId))
+            try
             {
-                return Forbid();
+                var updatedBankAccount = await _bankAccountService.UpdateBankAccountAsync(id, updateDto, cancellationToken);
+                return Ok(updatedBankAccount);
             }
-
-            var updatedBankAccount = await _bankAccountService.UpdateBankAccountAsync(id, updateDto, cancellationToken);
-            return Ok(updatedBankAccount);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating bank account with ID {BankAccountId}", id);
+                return StatusCode(500, "An error occurred while updating the bank account.");
+            }
         }
 
-        [HttpDelete("{id:guid}")]
+        [HttpDelete("{sellerId:guid}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteBankAccount(Guid id, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> DeleteBankAccount(Guid id, Guid sellerId, CancellationToken cancellationToken = default)
         {
-            var currentUserId = GetCurrentUserId();
-            var result = await _bankAccountService.DeleteBankAccountAsync(id, currentUserId, cancellationToken);
-
-            return NoContent();
+            try
+            {
+                await _bankAccountService.DeleteBankAccountAsync(id, sellerId, cancellationToken);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting bank account with ID {BankAccountId}", id);
+                return StatusCode(500, "An error occurred while deleting the bank account.");
+            }
         }
 
         [HttpPost("{id:guid}/verify")]
-        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> VerifyBankAccount(Guid id, CancellationToken cancellationToken = default)
         {
-            var result = await _bankAccountService.VerifyBankAccountAsync(id, cancellationToken);
-            return Ok(new { verified = result });
+            try
+            {
+                var result = await _bankAccountService.VerifyBankAccountAsync(id, cancellationToken);
+                return Ok(new { verified = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying bank account with ID {BankAccountId}", id);
+                return StatusCode(500, "An error occurred while verifying the bank account.");
+            }
         }
 
         [HttpPost("validate")]
@@ -123,32 +142,16 @@ namespace Presentation.API
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<BankAccountValidationDto>> ValidateBankAccount([FromBody] BankAccountCreateDto createDto, CancellationToken cancellationToken = default)
         {
-            var validation = await _bankAccountService.ValidateBankAccountAsync(createDto, cancellationToken);
-            return Ok(validation);
-        }
-
-        #region Helper Methods
-
-        private Guid GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            try
             {
-                throw new Shared.Exceptions.UnauthorizedException("User not authenticated or invalid user ID");
+                var validation = await _bankAccountService.ValidateBankAccountAsync(createDto, cancellationToken);
+                return Ok(validation);
             }
-            return userId;
-        }
-
-        private async Task<bool> IsBankAccountOwnerOrAdmin(Guid resourceOwnerId)
-        {
-            var currentUserId = GetCurrentUserId();
-            if (currentUserId == resourceOwnerId)
+            catch (Exception ex)
             {
-                return true;
+                _logger.LogError(ex, "Error validating bank account");
+                return StatusCode(500, "An error occurred while validating the bank account.");
             }
-
-            return User.IsInRole("Admin");
         }
-        #endregion
     }
 }
