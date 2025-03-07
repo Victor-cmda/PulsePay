@@ -1,6 +1,5 @@
 ﻿using Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json.Linq;
 
 namespace Infrastructure.Data
 {
@@ -9,7 +8,6 @@ namespace Infrastructure.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<Transaction> Transactions { get; set; }
-        public DbSet<Withdraw> Withdraws { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<BankAccount> BankAccounts { get; set; }
@@ -27,28 +25,6 @@ namespace Infrastructure.Data
                 entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").HasConversion(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc)).IsRequired();
                 entity.Property(e => e.Status).HasColumnName("Status").HasMaxLength(20);
                 entity.Property(e => e.Details).HasColumnName("Details").HasColumnType("jsonb");
-            });
-
-
-            modelBuilder.Entity<Withdraw>(entity =>
-            {
-                entity.ToTable("Withdraws");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).HasColumnName("Id").IsRequired();
-                entity.Property(e => e.SellerId).HasColumnName("SellerId").IsRequired();
-                entity.Property(e => e.Amount).HasColumnName("Amount").HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(e => e.Status).HasColumnName("Status").HasMaxLength(20).IsRequired();
-                entity.Property(e => e.WithdrawMethod).HasColumnName("WithdrawMethod").HasMaxLength(50).IsRequired();
-                entity.Property(e => e.RequestedAt).HasColumnName("RequestedAt").IsRequired();
-                entity.Property(e => e.ProcessedAt).HasColumnName("ProcessedAt");
-                entity.Property(e => e.BankAccountId).HasColumnName("BankAccountId").IsRequired();
-                entity.Property(e => e.FailureReason).HasColumnName("FailureReason").HasMaxLength(500);
-                entity.Property(e => e.TransactionReceipt).HasColumnName("TransactionReceipt");
-
-                entity.HasOne(w => w.BankAccount)
-                    .WithMany()
-                    .HasForeignKey(w => w.BankAccountId)
-                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<WalletTransaction>(entity =>
@@ -98,7 +74,6 @@ namespace Infrastructure.Data
                 entity.Property(e => e.IsVerified).HasColumnName("IsVerified").IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("CreatedAt").IsRequired();
                 entity.Property(e => e.LastUpdatedAt).HasColumnName("LastUpdatedAt").IsRequired();
-                entity.HasMany(e => e.Withdraws).WithOne(w => w.BankAccount).HasForeignKey(w => w.BankAccountId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(e => new { e.BankCode, e.AccountNumber, e.BranchNumber }).HasName("IX_BankAccounts_AccountDetails");
                 entity.HasIndex(e => new { e.PixKey, e.PixKeyType }).HasName("IX_BankAccounts_PixKey").IsUnique().HasFilter("\"PIXKey\" IS NOT NULL AND \"PIXKeyType\" IS NOT NULL");
                 entity.HasIndex(e => e.SellerId).HasName("IX_BankAccounts_SellerId");

@@ -1,4 +1,5 @@
 ﻿using Domain.Interfaces;
+using Domain.Interfaces.Transactions;
 using Domain.Models;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,13 @@ namespace Infrastructure.Repositories
 
         public WalletRepository(AppDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         public async Task<Wallet> GetByIdAsync(Guid id)
         {
             return await _context.Wallets
+                .Include(w => w.Transactions)
                 .FirstOrDefaultAsync(w => w.Id == id);
         }
 
@@ -58,6 +60,11 @@ namespace Infrastructure.Repositories
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+        }
+
+        public async Task<IDbTransaction> BeginTransactionAsync()
+        {
+            return new EfDbTransaction(await _context.Database.BeginTransactionAsync());
         }
     }
 }

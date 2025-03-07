@@ -2,14 +2,21 @@
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Presentation.API.Common.Responses;
 using Shared.Enums;
 using Shared.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
-namespace API.Controllers
+namespace Presentation.API.Controllers
 {
     [Authorize(Policy = "UserPolicy")]
     [ApiController]
-    [Route("api/wallet-transaction")]
+    [Route("api/wallet-transactions")]
+    [Produces("application/json")]
     public class WalletTransactionsController : ControllerBase
     {
         private readonly IWalletTransactionService _transactionService;
@@ -19,15 +26,27 @@ namespace API.Controllers
             IWalletTransactionService transactionService,
             ILogger<WalletTransactionsController> logger)
         {
-            _transactionService = transactionService;
-            _logger = logger;
+            _transactionService = transactionService ?? throw new ArgumentNullException(nameof(transactionService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// Cria uma nova transação de carteira
+        /// </summary>
+        /// <param name="request">Dados da transação</param>
+        /// <response code="200">Transação criada com sucesso</response>
+        /// <response code="400">Dados inválidos ou saldo insuficiente</response>
+        /// <response code="404">Carteira não encontrada</response>
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequest request)
         {
             try
             {
+                _logger.LogInformation("Criando transação para carteira {WalletId}", request.WalletId);
+
                 var transaction = await _transactionService.CreateTransactionAsync(
                     request.WalletId,
                     request.Amount,
@@ -36,164 +55,211 @@ namespace API.Controllers
                     request.Reference
                 );
 
-                var response = new TransactionResponse
-                {
-                    Id = transaction.Id,
-                    WalletId = transaction.WalletId,
-                    Amount = transaction.Amount,
-                    Type = transaction.Type,
-                    Status = transaction.Status,
-                    Description = transaction.Description,
-                    Reference = transaction.Reference,
-                    CreatedAt = transaction.CreatedAt,
-                    ProcessedAt = transaction.ProcessedAt
-                };
-
-                return Ok(response);
+                return Ok(new ApiResponse<WalletTransactionDto>(transaction));
             }
-            catch (Exception ex) when (ex is ValidationException || ex is InsufficientFundsException)
+            catch (ValidationException ex)
             {
-                return BadRequest(new ErrorResponse(ex.Message));
+                _logger.LogWarning(ex, "Validação falhou ao criar transação");
+                return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest, ex.Message));
+            }
+            catch (InsufficientFundsException ex)
+            {
+                _logger.LogWarning(ex, "Saldo insuficiente para transação na carteira {WalletId}", request.WalletId);
+                return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest, ex.Message));
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Carteira não encontrada {WalletId}", request.WalletId);
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar transação para carteira {WalletId}", request.WalletId);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
             }
         }
 
-        [HttpGet("{transactionId}")]
+        /// <summary>
+        /// Obtém uma transação pelo ID
+        /// </summary>
+        /// <param name="transactionId">ID da transação</param>
+        /// <response code="200">Transação encontrada</response>
+        /// <response code="404">Transação não encontrada</response>
+        [HttpGet("{transactionId:guid}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetTransaction(Guid transactionId)
         {
             try
             {
-                var transaction = await _transactionService.GetTransactionByIdAsync(transactionId);
-                var response = new TransactionResponse
-                {
-                    Id = transaction.Id,
-                    WalletId = transaction.WalletId,
-                    Amount = transaction.Amount,
-                    Type = transaction.Type,
-                    Status = transaction.Status,
-                    Description = transaction.Description,
-                    Reference = transaction.Reference,
-                    CreatedAt = transaction.CreatedAt,
-                    ProcessedAt = transaction.ProcessedAt
-                };
+                _logger.LogInformation("Obtendo transação {TransactionId}", transactionId);
 
-                return Ok(response);
+                var transaction = await _transactionService.GetTransactionByIdAsync(transactionId);
+
+                return Ok(new ApiResponse<WalletTransactionDto>(transaction));
             }
             catch (NotFoundException ex)
             {
-                return NotFound(new ErrorResponse(ex.Message));
+                _logger.LogWarning(ex, "Transação não encontrada {TransactionId}", transactionId);
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter transação {TransactionId}", transactionId);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
             }
         }
 
-        [HttpGet("wallet/{walletId}/balance")]
+        /// <summary>
+        /// Obtém o saldo atual da carteira
+        /// </summary>
+        /// <param name="walletId">ID da carteira</param>
+        /// <response code="200">Saldo obtido com sucesso</response>
+        /// <response code="404">Carteira não encontrada</response>
+        [HttpGet("wallet/{walletId:guid}/balance")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetBalance(Guid walletId)
         {
-            var balance = await _transactionService.GetWalletBalanceAsync(walletId);
-            var response = new WalletBalanceResponse
+            try
             {
-                WalletId = walletId,
-                CurrentBalance = balance,
-                LastUpdated = DateTime.UtcNow
-            };
-            return Ok(response);
+                _logger.LogInformation("Obtendo saldo da carteira {WalletId}", walletId);
+
+                var balance = await _transactionService.GetWalletBalanceAsync(walletId);
+
+                return Ok(new ApiResponse<WalletBalanceDto>(balance));
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Carteira não encontrada {WalletId}", walletId);
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter saldo da carteira {WalletId}", walletId);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
+            }
         }
 
-        [HttpGet("wallet/{walletId}/history")]
+        /// <summary>
+        /// Obtém o histórico de transações de uma carteira
+        /// </summary>
+        /// <param name="walletId">ID da carteira</param>
+        /// <param name="request">Parâmetros para filtragem</param>
+        /// <response code="200">Histórico obtido com sucesso</response>
+        /// <response code="404">Carteira não encontrada</response>
+        [HttpGet("wallet/{walletId:guid}/history")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetTransactionHistory(
             Guid walletId,
             [FromQuery] GetTransactionHistoryRequest request)
         {
-            var transactions = await _transactionService.GetTransactionHistoryAsync(
-                walletId,
-                request.StartDate,
-                request.EndDate
-            );
-
-            var transactionResponses = transactions.Select(t => new TransactionResponse
+            try
             {
-                Id = t.Id,
-                WalletId = t.WalletId,
-                Amount = t.Amount,
-                Type = t.Type,
-                Status = t.Status,
-                Description = t.Description,
-                Reference = t.Reference,
-                CreatedAt = t.CreatedAt,
-                ProcessedAt = t.ProcessedAt
-            }).ToList();
+                _logger.LogInformation(
+                    "Obtendo histórico de transações para carteira {WalletId} entre {StartDate} e {EndDate}",
+                    walletId, request.StartDate, request.EndDate);
 
-            // Calcular o sumário
-            var summary = new TransactionSummary
-            {
-                TotalCredits = transactions.Where(t => t.Type == TransactionType.Credit).Sum(t => t.Amount),
-                TotalDebits = transactions.Where(t => t.Type == TransactionType.Debit).Sum(t => t.Amount),
-                TotalTransactions = transactions.Count()
-            };
-            summary.NetAmount = summary.TotalCredits - summary.TotalDebits;
+                var transactions = await _transactionService.GetTransactionHistoryAsync(
+                    walletId,
+                    request.StartDate,
+                    request.EndDate,
+                    request.Type,
+                    request.Status,
+                    request.Page,
+                    request.PageSize
+                );
 
-            // Aplicar paginação
-            var paginatedTransactions = transactionResponses
-                .Skip((request.Page - 1) * request.PageSize)
-                .Take(request.PageSize);
-
-            var response = new TransactionHistoryResponse
-            {
-                Transactions = paginatedTransactions,
-                Summary = summary,
-                Pagination = new PaginationMetadata
+                // Calcular o sumário
+                var summary = new TransactionSummaryDto
                 {
-                    CurrentPage = request.Page,
-                    PageSize = request.PageSize,
-                    TotalCount = transactions.Count(),
-                    TotalPages = (int)Math.Ceiling(transactions.Count() / (double)request.PageSize)
-                }
-            };
+                    TotalCredits = transactions
+                        .Where(t => t.Type == TransactionType.Credit.ToString() || t.Type == TransactionType.Deposit.ToString())
+                        .Sum(t => t.Amount),
 
-            return Ok(response);
+                    TotalDebits = transactions
+                        .Where(t => t.Type == TransactionType.Debit.ToString() || t.Type == TransactionType.Withdraw.ToString())
+                        .Sum(t => t.Amount),
+
+                    TotalTransactions = transactions.Count
+                };
+
+                summary.NetAmount = summary.TotalCredits - summary.TotalDebits;
+
+                var response = new TransactionHistoryResponseDto
+                {
+                    Transactions = transactions,
+                    Summary = summary,
+                    Pagination = new PaginationMetadataDto
+                    {
+                        CurrentPage = request.Page,
+                        PageSize = request.PageSize,
+                        TotalCount = transactions.Count,
+                        TotalPages = (int)Math.Ceiling(transactions.Count / (double)request.PageSize)
+                    }
+                };
+
+                return Ok(new ApiResponse<TransactionHistoryResponseDto>(response));
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Carteira não encontrada {WalletId}", walletId);
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter histórico de transações para carteira {WalletId}", walletId);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
+            }
         }
 
-        [HttpPut("{transactionId}/status")]
+        /// <summary>
+        /// Atualiza o status de uma transação
+        /// </summary>
+        /// <param name="transactionId">ID da transação</param>
+        /// <param name="request">Dados para atualização do status</param>
+        /// <response code="200">Status atualizado com sucesso</response>
+        /// <response code="400">Dados inválidos</response>
+        /// <response code="404">Transação não encontrada</response>
+        [HttpPut("{transactionId:guid}/status")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateTransactionStatus(
             Guid transactionId,
             [FromBody] UpdateTransactionStatusRequest request)
         {
             try
             {
-                var transaction = request.Status switch
+                _logger.LogInformation(
+                    "Atualizando status da transação {TransactionId} para {Status}",
+                    transactionId, request.Status);
+
+                WalletTransactionDto transaction = request.Status switch
                 {
                     TransactionStatus.Cancelled => await _transactionService.CancelTransactionAsync(transactionId, request.Reason),
                     TransactionStatus.Completed => await _transactionService.ProcessTransactionAsync(transactionId),
                     _ => throw new ValidationException("Status de transação inválido")
                 };
 
-                var response = new TransactionResponse
-                {
-                    Id = transaction.Id,
-                    WalletId = transaction.WalletId,
-                    Amount = transaction.Amount,
-                    Type = transaction.Type,
-                    Status = transaction.Status,
-                    Description = transaction.Description,
-                    Reference = transaction.Reference,
-                    CreatedAt = transaction.CreatedAt,
-                    ProcessedAt = transaction.ProcessedAt
-                };
-
-                return Ok(response);
+                return Ok(new ApiResponse<WalletTransactionDto>(transaction));
             }
-            catch (Exception ex) when (ex is ValidationException || ex is NotFoundException)
+            catch (ValidationException ex)
             {
-                return BadRequest(new ErrorResponse(ex.Message));
+                _logger.LogWarning(ex, "Validação falhou ao atualizar status da transação {TransactionId}", transactionId);
+                return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest, ex.Message));
             }
-        }
-    }
-
-    public class ErrorResponse
-    {
-        public string Message { get; set; }
-
-        public ErrorResponse(string message)
-        {
-            Message = message;
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Transação não encontrada {TransactionId}", transactionId);
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar status da transação {TransactionId}", transactionId);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
+            }
         }
     }
 }

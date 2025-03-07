@@ -133,7 +133,6 @@ namespace Infrastructure.DI
             services.AddTransient<FileService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IWalletService, WalletService>();
-            services.AddScoped<IWithdrawService, WithdrawService>();
             services.AddScoped<IBankAccountService, BankAccountService>();
             services.AddScoped<IWalletTransactionService, WalletTransactionService>();
             services.AddTransient<ITransactionService, TransactionService>();
@@ -146,7 +145,6 @@ namespace Infrastructure.DI
             // Repositories
             services.AddTransient<ITransactionRepository, TransactionRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
-            services.AddScoped<IWithdrawRepository, WithdrawRepository>();
             services.AddScoped<IBankAccountRepository, BankAccountRepository>();
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
 

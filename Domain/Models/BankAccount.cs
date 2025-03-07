@@ -1,6 +1,4 @@
 ﻿using Shared.Enums;
-using System;
-using System.Collections.Generic;
 
 namespace Domain.Models
 {
@@ -24,7 +22,6 @@ namespace Domain.Models
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 
-        public virtual ICollection<Withdraw> Withdraws { get; set; } = new List<Withdraw>();
 
         public bool IsTedAccount => AccountType == BankAccountType.TED;
         public bool IsPixAccount => AccountType == BankAccountType.PIX;

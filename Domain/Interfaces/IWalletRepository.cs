@@ -1,4 +1,5 @@
-﻿using Domain.Models;
+﻿using Domain.Interfaces.Transactions;
+using Domain.Models;
 
 namespace Domain.Interfaces
 {
@@ -10,5 +11,6 @@ namespace Domain.Interfaces
         Task<Wallet> UpdateAsync(Wallet wallet);
         Task<bool> ExistsAsync(Guid sellerId);
         Task<IEnumerable<Wallet>> GetAllAsync(int page = 1, int pageSize = 10);
+        Task<IDbTransaction> BeginTransactionAsync();
     }
 }

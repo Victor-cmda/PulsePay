@@ -1,16 +1,22 @@
-﻿using Domain.Models;
+﻿using Application.DTOs;
 using Shared.Enums;
 
 namespace Application.Interfaces
 {
     public interface IWalletTransactionService
     {
-        Task<WalletTransaction> CreateTransactionAsync(Guid walletId, decimal amount, TransactionType type, string description, string? reference = null);
-        Task<WalletTransaction> ProcessTransactionAsync(Guid transactionId);
-        Task<WalletTransaction> CancelTransactionAsync(Guid transactionId, string reason);
-        Task<decimal> GetWalletBalanceAsync(Guid walletId);
-        Task<IEnumerable<WalletTransaction>> GetTransactionHistoryAsync(Guid walletId, DateTime startDate, DateTime endDate);
-        Task<bool> HasSufficientFundsAsync(Guid walletId, decimal amount);
-        Task<WalletTransaction> GetTransactionByIdAsync(Guid transactionId);
+        Task<WalletTransactionDto> GetTransactionByIdAsync(Guid transactionId);
+        Task<WalletTransactionDto> CreateTransactionAsync(Guid walletId, decimal amount, TransactionType type, string description, string reference = null);
+        Task<WalletTransactionDto> ProcessTransactionAsync(Guid transactionId);
+        Task<WalletTransactionDto> CancelTransactionAsync(Guid transactionId, string reason = null);
+        Task<WalletBalanceDto> GetWalletBalanceAsync(Guid walletId);
+        Task<List<WalletTransactionDto>> GetTransactionHistoryAsync(
+            Guid walletId,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            TransactionType? type = null,
+            TransactionStatus? status = null,
+            int page = 1,
+            int pageSize = 20);
     }
 }

@@ -12,7 +12,7 @@ namespace Infrastructure.Repositories
 
         public WalletTransactionRepository(AppDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         public async Task<WalletTransaction> GetByIdAsync(Guid id)
@@ -22,19 +22,53 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(wt => wt.Id == id);
         }
 
-        public async Task<IEnumerable<WalletTransaction>> GetByWalletIdAsync(Guid walletId)
+        public async Task<List<WalletTransaction>> GetByWalletIdAsync(
+            Guid walletId,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int page = 1,
+            int pageSize = 20)
+        {
+            var query = _context.WalletTransactions
+                .Where(wt => wt.WalletId == walletId);
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(wt => wt.CreatedAt >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(wt => wt.CreatedAt <= endDate.Value);
+            }
+
+            return await query
+                .OrderByDescending(wt => wt.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<List<WalletTransaction>> GetRecentByWalletIdAsync(Guid walletId, int count = 10)
         {
             return await _context.WalletTransactions
                 .Where(wt => wt.WalletId == walletId)
                 .OrderByDescending(wt => wt.CreatedAt)
+                .Take(count)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<WalletTransaction>> GetByWalletIdAndStatusAsync(Guid walletId, TransactionStatus status)
+        public async Task<List<WalletTransaction>> GetByWalletIdAndStatusAsync(
+            Guid walletId,
+            TransactionStatus status,
+            int page = 1,
+            int pageSize = 20)
         {
             return await _context.WalletTransactions
                 .Where(wt => wt.WalletId == walletId && wt.Status == status)
                 .OrderByDescending(wt => wt.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
         }
 
@@ -42,7 +76,7 @@ namespace Infrastructure.Repositories
         {
             transaction.CreatedAt = DateTime.UtcNow;
 
-            if (transaction.Status == TransactionStatus.Completed)
+            if (transaction.Status == TransactionStatus.Completed && !transaction.ProcessedAt.HasValue)
             {
                 transaction.ProcessedAt = DateTime.UtcNow;
             }
@@ -55,6 +89,7 @@ namespace Infrastructure.Repositories
 
         public async Task<WalletTransaction> UpdateAsync(WalletTransaction transaction)
         {
+            // Certifica que ProcessedAt é preenchido para transações completadas
             if (transaction.Status == TransactionStatus.Completed && !transaction.ProcessedAt.HasValue)
             {
                 transaction.ProcessedAt = DateTime.UtcNow;
@@ -73,13 +108,17 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
 
             decimal balance = 0;
+
             foreach (var transaction in completedTransactions)
             {
-                if (transaction.Type == TransactionType.Credit || transaction.Type == TransactionType.Refund)
+                if (transaction.Type == TransactionType.Credit ||
+                    transaction.Type == TransactionType.Deposit ||
+                    transaction.Type == TransactionType.Refund)
                 {
                     balance += transaction.Amount;
                 }
-                else if (transaction.Type == TransactionType.Debit || transaction.Type == TransactionType.Withdraw)
+                else if (transaction.Type == TransactionType.Debit ||
+                         transaction.Type == TransactionType.Withdraw)
                 {
                     balance -= transaction.Amount;
                 }
@@ -88,14 +127,37 @@ namespace Infrastructure.Repositories
             return balance;
         }
 
-        public async Task<IEnumerable<WalletTransaction>> GetTransactionHistoryAsync(Guid walletId, DateTime startDate, DateTime endDate)
+        public async Task<int> GetTransactionCountAsync(
+            Guid walletId,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            TransactionType? type = null,
+            TransactionStatus? status = null)
         {
-            return await _context.WalletTransactions
-                .Where(wt => wt.WalletId == walletId &&
-                            wt.CreatedAt >= startDate &&
-                            wt.CreatedAt <= endDate)
-                .OrderByDescending(wt => wt.CreatedAt)
-                .ToListAsync();
+            var query = _context.WalletTransactions
+                .Where(wt => wt.WalletId == walletId);
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(wt => wt.CreatedAt >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(wt => wt.CreatedAt <= endDate.Value);
+            }
+
+            if (type.HasValue)
+            {
+                query = query.Where(wt => wt.Type == type.Value);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(wt => wt.Status == status.Value);
+            }
+
+            return await query.CountAsync();
         }
     }
 }
