@@ -53,8 +53,12 @@ namespace Infrastructure.Data
                 entity.Property(e => e.AvailableBalance).HasColumnType("decimal(18,2)").IsRequired();
                 entity.Property(e => e.PendingBalance).HasColumnType("decimal(18,2)").IsRequired();
                 entity.Property(e => e.TotalBalance).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.WalletType).HasConversion<string>().HasMaxLength(20).IsRequired();
+                entity.Property(e => e.IsDefault).IsRequired().HasDefaultValue(false);
                 entity.Property(e => e.LastUpdateAt).IsRequired();
                 entity.Property(e => e.CreatedAt).IsRequired();
+                entity.HasIndex(e => new { e.SellerId, e.WalletType })
+                      .HasName("IX_Wallets_SellerId_WalletType");
             });
 
             modelBuilder.Entity<BankAccount>(entity =>

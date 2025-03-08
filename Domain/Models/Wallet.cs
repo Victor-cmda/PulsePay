@@ -1,5 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Shared.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace Domain.Models
 {
@@ -20,6 +21,11 @@ namespace Domain.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalBalance { get; set; }
+
+        [Required]
+        public WalletType WalletType { get; set; }
+
+        public bool IsDefault { get; set; }
 
         public DateTime LastUpdateAt { get; set; }
 

@@ -227,7 +227,7 @@ namespace Application.Services
         {
             try
             {
-                var wallet = await _walletRepository.GetBySellerIdAsync(walletId);
+                var wallet = await _walletRepository.GetByIdAsync(walletId);
                 if (wallet == null)
                 {
                     throw new NotFoundException($"Carteira com ID {walletId} não encontrada");

@@ -3,6 +3,7 @@ using Domain.Interfaces.Transactions;
 using Domain.Models;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Shared.Enums;
 
 namespace Infrastructure.Repositories
 {
@@ -20,12 +21,6 @@ namespace Infrastructure.Repositories
             return await _context.Wallets
                 .Include(w => w.Transactions)
                 .FirstOrDefaultAsync(w => w.Id == id);
-        }
-
-        public async Task<Wallet> GetBySellerIdAsync(Guid sellerId)
-        {
-            return await _context.Wallets
-                .FirstOrDefaultAsync(w => w.SellerId == sellerId);
         }
 
         public async Task<Wallet> CreateAsync(Wallet wallet)
@@ -49,17 +44,37 @@ namespace Infrastructure.Repositories
             return wallet;
         }
 
-        public async Task<bool> ExistsAsync(Guid sellerId)
-        {
-            return await _context.Wallets.AnyAsync(w => w.SellerId == sellerId);
-        }
-
         public async Task<IEnumerable<Wallet>> GetAllAsync(int page = 1, int pageSize = 10)
         {
             return await _context.Wallets
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+        }
+
+        public async Task<Wallet> GetBySellerIdAndTypeAsync(Guid sellerId, WalletType walletType)
+        {
+            return await _context.Wallets
+                .FirstOrDefaultAsync(w => w.SellerId == sellerId && w.WalletType == walletType);
+        }
+
+        public async Task<IEnumerable<Wallet>> GetAllBySellerIdAsync(Guid sellerId)
+        {
+            return await _context.Wallets
+                .Where(w => w.SellerId == sellerId)
+                .OrderBy(w => w.WalletType)
+                .ToListAsync();
+        }
+
+        public async Task<int> CountBySellerIdAsync(Guid sellerId)
+        {
+            return await _context.Wallets
+                .CountAsync(w => w.SellerId == sellerId);
+        }
+
+        public async Task<bool> ExistsAsync(Guid sellerId, WalletType walletType)
+        {
+            return await _context.Wallets.AnyAsync(w => w.SellerId == sellerId && w.WalletType == walletType);
         }
 
         public async Task<IDbTransaction> BeginTransactionAsync()

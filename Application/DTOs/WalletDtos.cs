@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Shared.Enums;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -11,6 +12,11 @@ namespace Application.DTOs
     {
         [Required(ErrorMessage = "O ID do vendedor é obrigatório")]
         public Guid SellerId { get; set; }
+
+        [Required(ErrorMessage = "O tipo da carteira é obrigatório")]
+        public WalletType WalletType { get; set; }
+
+        public bool IsDefault { get; set; } = false;
     }
 
     /// <summary>
@@ -53,6 +59,8 @@ namespace Application.DTOs
         public decimal AvailableBalance { get; set; }
         public decimal PendingBalance { get; set; }
         public decimal TotalBalance { get; set; }
+        public WalletType WalletType { get; set; }
+        public bool IsDefault { get; set; }
         public DateTime LastUpdateAt { get; set; }
         public DateTime CreatedAt { get; set; }
     }

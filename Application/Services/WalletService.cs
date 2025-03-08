@@ -5,10 +5,6 @@ using Domain.Models;
 using Microsoft.Extensions.Logging;
 using Shared.Enums;
 using Shared.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using ValidationException = Shared.Exceptions.ValidationException;
 
 namespace Application.Services
@@ -29,20 +25,35 @@ namespace Application.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<WalletDto> GetWalletAsync(Guid sellerId)
+        public async Task<WalletDto> GetWalletAsync(Guid id)
         {
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetByIdAsync(id);
             if (wallet == null)
-                throw new NotFoundException($"Carteira não encontrada para o vendedor {sellerId}");
+                throw new NotFoundException($"Carteira com ID {id} não encontrada");
 
             return MapToDto(wallet);
         }
 
-        public async Task<WalletWithTransactionsDto> GetWalletWithRecentTransactionsAsync(Guid sellerId, int count = 10)
+        public async Task<WalletDto> GetWalletByTypeAsync(Guid sellerId, WalletType walletType)
         {
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetBySellerIdAndTypeAsync(sellerId, walletType);
             if (wallet == null)
-                throw new NotFoundException($"Carteira não encontrada para o vendedor {sellerId}");
+                throw new NotFoundException($"Carteira do tipo {walletType} não encontrada para o vendedor {sellerId}");
+
+            return MapToDto(wallet);
+        }
+
+        public async Task<IEnumerable<WalletDto>> GetSellerWalletsAsync(Guid sellerId)
+        {
+            var wallets = await _walletRepository.GetAllBySellerIdAsync(sellerId);
+            return wallets.Select(MapToDto);
+        }
+
+        public async Task<WalletWithTransactionsDto> GetWalletWithRecentTransactionsAsync(Guid walletId, int count = 10)
+        {
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
+            if (wallet == null)
+                throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
 
             var transactions = await _transactionRepository.GetRecentByWalletIdAsync(wallet.Id, count);
 
@@ -53,16 +64,61 @@ namespace Application.Services
             };
         }
 
+        // Em WalletService.cs, no método CreateWalletAsync
+
         public async Task<WalletDto> CreateWalletAsync(WalletCreateDto createDto)
         {
-            var exists = await _walletRepository.ExistsAsync(createDto.SellerId);
+            // Verificar se já existe uma carteira do mesmo tipo para este vendedor
+            var exists = await _walletRepository.ExistsAsync(createDto.SellerId, createDto.WalletType);
             if (exists)
-                throw new ConflictException($"Já existe uma carteira para o vendedor {createDto.SellerId}");
+                throw new ConflictException($"Já existe uma carteira do tipo {createDto.WalletType} para o vendedor {createDto.SellerId}");
+
+            // Verificar regras especiais para carteiras General
+            if (createDto.WalletType == WalletType.General)
+            {
+                // Se o vendedor tenta criar uma carteira General, ele não pode ter outras carteiras
+                var walletCount = await _walletRepository.CountBySellerIdAsync(createDto.SellerId);
+                if (walletCount > 0)
+                    throw new ConflictException("Não é possível criar uma carteira do tipo General se já existem outras carteiras");
+            }
+            else
+            {
+                // Se o vendedor tenta criar carteiras especializadas, ele não pode ter uma carteira General
+                var hasGeneralWallet = await _walletRepository.ExistsAsync(createDto.SellerId, WalletType.General);
+                if (hasGeneralWallet)
+                    throw new ConflictException("Não é possível criar carteiras especializadas quando já existe uma carteira do tipo General");
+
+                // Verificar se já atingiu o limite de 2 carteiras especializadas
+                var walletCount = await _walletRepository.CountBySellerIdAsync(createDto.SellerId);
+                if (walletCount >= 2)
+                    throw new ConflictException($"O vendedor {createDto.SellerId} já possui o número máximo de carteiras especializadas (2)");
+            }
+
+            // Se for a primeira carteira, torná-la padrão
+            var anyWallets = await _walletRepository.CountBySellerIdAsync(createDto.SellerId) > 0;
+            bool isDefault = !anyWallets || createDto.IsDefault;
+
+            // Se esta carteira for definida como padrão e já existir outra carteira,
+            // teremos que atualizar a outra carteira para não ser mais a padrão
+            if (isDefault && anyWallets)
+            {
+                var existingWallets = await _walletRepository.GetAllBySellerIdAsync(createDto.SellerId);
+                foreach (var existingWallet in existingWallets)
+                {
+                    if (existingWallet.IsDefault)
+                    {
+                        existingWallet.IsDefault = false;
+                        await _walletRepository.UpdateAsync(existingWallet);
+                    }
+                }
+            }
 
             var wallet = new Wallet
             {
                 Id = Guid.NewGuid(),
                 SellerId = createDto.SellerId,
+                WalletType = createDto.WalletType,
+                IsDefault = isDefault,
                 AvailableBalance = 0,
                 PendingBalance = 0,
                 TotalBalance = 0,
@@ -71,16 +127,17 @@ namespace Application.Services
             };
 
             var created = await _walletRepository.CreateAsync(wallet);
-            _logger.LogInformation("Carteira criada para o vendedor {SellerId}", createDto.SellerId);
+            _logger.LogInformation("Carteira do tipo {WalletType} criada para o vendedor {SellerId}",
+                createDto.WalletType, createDto.SellerId);
 
             return MapToDto(created);
         }
 
-        public async Task<WalletDto> UpdateBalanceAsync(Guid sellerId, WalletUpdateDto updateDto)
+        public async Task<WalletDto> UpdateBalanceAsync(Guid walletId, WalletUpdateDto updateDto)
         {
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
             if (wallet == null)
-                throw new NotFoundException($"Carteira não encontrada para o vendedor {sellerId}");
+                throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
 
             wallet.AvailableBalance = updateDto.AvailableBalance;
             wallet.PendingBalance = updateDto.PendingBalance;
@@ -88,19 +145,70 @@ namespace Application.Services
             wallet.LastUpdateAt = DateTime.UtcNow;
 
             var updated = await _walletRepository.UpdateAsync(wallet);
-            _logger.LogInformation("Saldo atualizado para a carteira do vendedor {SellerId}", sellerId);
+            _logger.LogInformation("Saldo atualizado para a carteira {WalletId} do vendedor {SellerId}",
+                walletId, wallet.SellerId);
 
             return MapToDto(updated);
         }
 
-        public async Task<WalletDto> AddFundsAsync(Guid sellerId, WalletOperationDto operationDto)
+        public async Task<WalletDto> SetDefaultWalletAsync(Guid walletId, Guid sellerId)
+        {
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
+            if (wallet == null || wallet.SellerId != sellerId)
+                throw new NotFoundException($"Carteira {walletId} não encontrada para o vendedor {sellerId}");
+
+            // Já é a padrão
+            if (wallet.IsDefault)
+                return MapToDto(wallet);
+
+            // Começar uma transação para garantir consistência
+            await using var transaction = await _walletRepository.BeginTransactionAsync();
+
+            try
+            {
+                // Buscar todas as carteiras do vendedor e remover a flag padrão
+                var wallets = await _walletRepository.GetAllBySellerIdAsync(sellerId);
+                foreach (var w in wallets)
+                {
+                    if (w.IsDefault && w.Id != walletId)
+                    {
+                        w.IsDefault = false;
+                        await _walletRepository.UpdateAsync(w);
+                    }
+                }
+
+                // Definir a carteira atual como padrão
+                wallet.IsDefault = true;
+                wallet.LastUpdateAt = DateTime.UtcNow;
+                var updated = await _walletRepository.UpdateAsync(wallet);
+
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Carteira {WalletId} definida como padrão para o vendedor {SellerId}",
+                    walletId, sellerId);
+
+                return MapToDto(updated);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Erro ao definir a carteira {WalletId} como padrão", walletId);
+                throw;
+            }
+        }
+
+        public async Task<WalletDto> AddFundsAsync(Guid walletId, WalletOperationDto operationDto)
         {
             if (operationDto.Amount <= 0)
                 throw new ValidationException("O valor deve ser maior que zero");
 
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
             if (wallet == null)
-                throw new NotFoundException($"Carteira não encontrada para o vendedor {sellerId}");
+                throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
+
+            // Verificar se o tipo de operação é válido para o tipo da carteira
+            if (wallet.WalletType == WalletType.Withdrawal)
+                throw new ValidationException("Não é possível adicionar fundos diretamente a uma carteira do tipo Saque");
 
             // Criar a transação
             var transaction = new WalletTransaction
@@ -122,33 +230,37 @@ namespace Application.Services
             wallet.LastUpdateAt = DateTime.UtcNow;
 
             // Salvar as alterações em transação
-            await using var transaction1 = await _walletRepository.BeginTransactionAsync();
+            await using var dbTransaction = await _walletRepository.BeginTransactionAsync();
             try
             {
                 await _transactionRepository.CreateAsync(transaction);
                 var updated = await _walletRepository.UpdateAsync(wallet);
 
-                await transaction1.CommitAsync();
+                await dbTransaction.CommitAsync();
 
                 _logger.LogInformation("Adicionado {Amount} à carteira {WalletId}", operationDto.Amount, wallet.Id);
                 return MapToDto(updated);
             }
             catch (Exception ex)
             {
-                await transaction1.RollbackAsync();
+                await dbTransaction.RollbackAsync();
                 _logger.LogError(ex, "Erro ao adicionar fundos à carteira {WalletId}", wallet.Id);
                 throw;
             }
         }
 
-        public async Task<WalletDto> DeductFundsAsync(Guid sellerId, WalletOperationDto operationDto)
+        public async Task<WalletDto> DeductFundsAsync(Guid walletId, WalletOperationDto operationDto)
         {
             if (operationDto.Amount <= 0)
                 throw new ValidationException("O valor deve ser maior que zero");
 
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
             if (wallet == null)
-                throw new NotFoundException($"Carteira não encontrada para o vendedor {sellerId}");
+                throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
+
+            // Verificar se o tipo de operação é válido para o tipo da carteira
+            if (wallet.WalletType == WalletType.Deposit)
+                throw new ValidationException("Não é possível deduzir fundos diretamente de uma carteira do tipo Depósito");
 
             if (wallet.AvailableBalance < operationDto.Amount)
                 throw new InsufficientFundsException("Saldo insuficiente para esta operação");
@@ -159,7 +271,7 @@ namespace Application.Services
                 Id = Guid.NewGuid(),
                 WalletId = wallet.Id,
                 Amount = operationDto.Amount,
-                Type = TransactionType.Withdraw,
+                Type = TransactionType.Withdrawal,
                 Status = TransactionStatus.Completed,
                 Description = operationDto.Description ?? "Retirada de fundos",
                 Reference = operationDto.Reference,
@@ -173,30 +285,30 @@ namespace Application.Services
             wallet.LastUpdateAt = DateTime.UtcNow;
 
             // Salvar as alterações em transação
-            await using var transaction1 = await _walletRepository.BeginTransactionAsync();
+            await using var dbTransaction = await _walletRepository.BeginTransactionAsync();
             try
             {
                 await _transactionRepository.CreateAsync(transaction);
                 var updated = await _walletRepository.UpdateAsync(wallet);
 
-                await transaction1.CommitAsync();
+                await dbTransaction.CommitAsync();
 
                 _logger.LogInformation("Deduzido {Amount} da carteira {WalletId}", operationDto.Amount, wallet.Id);
                 return MapToDto(updated);
             }
             catch (Exception ex)
             {
-                await transaction1.RollbackAsync();
+                await dbTransaction.RollbackAsync();
                 _logger.LogError(ex, "Erro ao deduzir fundos da carteira {WalletId}", wallet.Id);
                 throw;
             }
         }
 
-        public async Task<List<WalletTransactionDto>> GetTransactionsAsync(Guid sellerId, DateTime? startDate = null, DateTime? endDate = null, int page = 1, int pageSize = 20)
+        public async Task<List<WalletTransactionDto>> GetTransactionsAsync(Guid walletId, DateTime? startDate = null, DateTime? endDate = null, int page = 1, int pageSize = 20)
         {
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
             if (wallet == null)
-                throw new NotFoundException($"Carteira não encontrada para o vendedor {sellerId}");
+                throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
 
             var transactions = await _transactionRepository.GetByWalletIdAsync(
                 wallet.Id,
@@ -208,16 +320,146 @@ namespace Application.Services
             return transactions.Select(MapTransactionToDto).ToList();
         }
 
-        public async Task<bool> HasSufficientFundsAsync(Guid sellerId, decimal amount)
+        public async Task<bool> HasSufficientFundsAsync(Guid walletId, decimal amount)
         {
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
             return wallet?.AvailableBalance >= amount;
         }
 
-        public async Task<decimal> GetAvailableBalanceAsync(Guid sellerId)
+        public async Task<decimal> GetAvailableBalanceAsync(Guid walletId)
         {
-            var wallet = await _walletRepository.GetBySellerIdAsync(sellerId);
-            return wallet?.AvailableBalance ?? 0;
+            var wallet = await _walletRepository.GetByIdAsync(walletId);
+            if (wallet == null)
+                throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
+
+            return wallet.AvailableBalance;
+        }
+
+        // Método auxiliar para transferir saldo entre carteiras (mesmo vendedor)
+        public async Task<(WalletDto sourceWallet, WalletDto destinationWallet)> TransferBetweenWalletsAsync(
+            Guid sourceWalletId,
+            Guid destinationWalletId,
+            decimal amount,
+            string description = null)
+        {
+            if (amount <= 0)
+                throw new ValidationException("O valor da transferência deve ser maior que zero");
+
+            if (sourceWalletId == destinationWalletId)
+                throw new ValidationException("As carteiras de origem e destino devem ser diferentes");
+
+            var sourceWallet = await _walletRepository.GetByIdAsync(sourceWalletId);
+            if (sourceWallet == null)
+                throw new NotFoundException($"Carteira de origem com ID {sourceWalletId} não encontrada");
+
+            var destinationWallet = await _walletRepository.GetByIdAsync(destinationWalletId);
+            if (destinationWallet == null)
+                throw new NotFoundException($"Carteira de destino com ID {destinationWalletId} não encontrada");
+
+            // Verificar se as carteiras pertencem ao mesmo vendedor
+            if (sourceWallet.SellerId != destinationWallet.SellerId)
+                throw new ValidationException("Transferências só são permitidas entre carteiras do mesmo vendedor");
+
+            // Verificar se o tipo de transferência é válido
+            bool isValidTransfer = false;
+
+            if (sourceWallet.WalletType == WalletType.General && destinationWallet.WalletType == WalletType.General)
+            {
+                // Transferência entre carteiras General (improvável, mas possível)
+                isValidTransfer = true;
+            }
+            else if (sourceWallet.WalletType == WalletType.General)
+            {
+                // De General para qualquer outra
+                isValidTransfer = true;
+            }
+            else if (destinationWallet.WalletType == WalletType.General)
+            {
+                // De qualquer uma para General
+                isValidTransfer = true;
+            }
+            else if (sourceWallet.WalletType == WalletType.Deposit && destinationWallet.WalletType == WalletType.Withdrawal)
+            {
+                // De Depósito para Saque (fluxo principal)
+                isValidTransfer = true;
+            }
+
+            if (!isValidTransfer)
+            {
+                throw new ValidationException($"Transferência de {sourceWallet.WalletType} para {destinationWallet.WalletType} não permitida");
+            }
+
+            // Verificar saldo
+            if (sourceWallet.AvailableBalance < amount)
+                throw new InsufficientFundsException("Saldo insuficiente na carteira de origem");
+
+
+            // Começar transação
+            await using var transaction = await _walletRepository.BeginTransactionAsync();
+
+            try
+            {
+                // Criar transação de saída
+                var outTransaction = new WalletTransaction
+                {
+                    Id = Guid.NewGuid(),
+                    WalletId = sourceWallet.Id,
+                    Amount = amount,
+                    Type = TransactionType.Withdraw,
+                    Status = TransactionStatus.Completed,
+                    Description = description ?? $"Transferência para carteira {destinationWallet.WalletType}",
+                    Reference = $"TRANSFER_TO_{destinationWallet.Id}",
+                    CreatedAt = DateTime.UtcNow,
+                    ProcessedAt = DateTime.UtcNow
+                };
+
+                // Criar transação de entrada
+                var inTransaction = new WalletTransaction
+                {
+                    Id = Guid.NewGuid(),
+                    WalletId = destinationWallet.Id,
+                    Amount = amount,
+                    Type = TransactionType.Deposit,
+                    Status = TransactionStatus.Completed,
+                    Description = description ?? $"Transferência da carteira {sourceWallet.WalletType}",
+                    Reference = $"TRANSFER_FROM_{sourceWallet.Id}",
+                    CreatedAt = DateTime.UtcNow,
+                    ProcessedAt = DateTime.UtcNow
+                };
+
+                // Atualizar saldos
+                sourceWallet.AvailableBalance -= amount;
+                sourceWallet.TotalBalance = sourceWallet.AvailableBalance + sourceWallet.PendingBalance;
+                sourceWallet.LastUpdateAt = DateTime.UtcNow;
+
+                destinationWallet.AvailableBalance += amount;
+                destinationWallet.TotalBalance = destinationWallet.AvailableBalance + destinationWallet.PendingBalance;
+                destinationWallet.LastUpdateAt = DateTime.UtcNow;
+
+                // Salvar transações
+                await _transactionRepository.CreateAsync(outTransaction);
+                await _transactionRepository.CreateAsync(inTransaction);
+
+                // Atualizar carteiras
+                var updatedSourceWallet = await _walletRepository.UpdateAsync(sourceWallet);
+                var updatedDestinationWallet = await _walletRepository.UpdateAsync(destinationWallet);
+
+                await transaction.CommitAsync();
+
+                _logger.LogInformation(
+                    "Transferência de {Amount} da carteira {SourceWalletId} para a carteira {DestinationWalletId}",
+                    amount, sourceWalletId, destinationWalletId);
+
+                return (MapToDto(updatedSourceWallet), MapToDto(updatedDestinationWallet));
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex,
+                    "Erro ao transferir {Amount} da carteira {SourceWalletId} para a carteira {DestinationWalletId}",
+                    amount, sourceWalletId, destinationWalletId);
+                throw;
+            }
         }
 
         private static WalletDto MapToDto(Wallet wallet)
@@ -229,6 +471,8 @@ namespace Application.Services
                 AvailableBalance = wallet.AvailableBalance,
                 PendingBalance = wallet.PendingBalance,
                 TotalBalance = wallet.TotalBalance,
+                WalletType = wallet.WalletType,
+                IsDefault = wallet.IsDefault,
                 LastUpdateAt = wallet.LastUpdateAt,
                 CreatedAt = wallet.CreatedAt
             };
