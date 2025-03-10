@@ -81,5 +81,15 @@ namespace Infrastructure.Repositories
         {
             return new EfDbTransaction(await _context.Database.BeginTransactionAsync());
         }
+
+        public async Task<int> GetTotalCountAsync()
+        {
+            return await _context.Wallets.CountAsync();
+        }
+
+        public async Task<decimal> GetTotalSystemBalanceAsync()
+        {
+            return await _context.Wallets.SumAsync(w => w.AvailableBalance);
+        }
     }
 }

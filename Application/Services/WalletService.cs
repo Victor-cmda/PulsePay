@@ -462,6 +462,22 @@ namespace Application.Services
             }
         }
 
+        public async Task<IEnumerable<WalletDto>> GetAllWalletsAsync(int page = 1, int pageSize = 20)
+        {
+            var wallets = await _walletRepository.GetAllAsync(page, pageSize);
+            return wallets.Select(MapToDto);
+        }
+
+        public async Task<int> GetTotalWalletCountAsync()
+        {
+            return await _walletRepository.GetTotalCountAsync();
+        }
+
+        public async Task<decimal> GetTotalSystemBalanceAsync()
+        {
+            return await _walletRepository.GetTotalSystemBalanceAsync();
+        }
+
         private static WalletDto MapToDto(Wallet wallet)
         {
             return new WalletDto

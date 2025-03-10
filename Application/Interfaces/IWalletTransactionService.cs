@@ -18,5 +18,7 @@ namespace Application.Interfaces
             TransactionStatus? status = null,
             int page = 1,
             int pageSize = 20);
+        Task<IEnumerable<WalletTransactionDto>> GetAllPendingTransactionsAsync(int page = 1, int pageSize = 20);
+        Task<int> GetTotalPendingTransactionsAsync();
     }
 }

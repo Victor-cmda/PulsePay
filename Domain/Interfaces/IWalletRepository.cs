@@ -15,5 +15,7 @@ namespace Domain.Interfaces
         Task<bool> ExistsAsync(Guid sellerId, WalletType walletType);
         Task<IEnumerable<Wallet>> GetAllAsync(int page = 1, int pageSize = 10);
         Task<IDbTransaction> BeginTransactionAsync();
+        Task<int> GetTotalCountAsync();
+        Task<decimal> GetTotalSystemBalanceAsync();
     }
 }

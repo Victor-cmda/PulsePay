@@ -22,6 +22,9 @@ namespace Domain.Models
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 
+        public string? Status { get; set; } = "Pending";
+        public string? RejectionReason { get; set; }
+
 
         public bool IsTedAccount => AccountType == BankAccountType.TED;
         public bool IsPixAccount => AccountType == BankAccountType.PIX;

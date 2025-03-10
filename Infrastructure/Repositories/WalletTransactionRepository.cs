@@ -159,5 +159,21 @@ namespace Infrastructure.Repositories
 
             return await query.CountAsync();
         }
+
+        public async Task<List<WalletTransaction>> GetAllPendingTransactionsAsync(int page = 1, int pageSize = 20)
+        {
+            return await _context.WalletTransactions
+                .Where(t => t.Status == TransactionStatus.Pending)
+                .OrderByDescending(t => t.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetPendingTransactionsCountAsync()
+        {
+            return await _context.WalletTransactions
+                .CountAsync(t => t.Status == TransactionStatus.Pending);
+        }
     }
 }

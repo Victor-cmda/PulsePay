@@ -22,5 +22,8 @@ namespace Application.Interfaces
             Guid destinationWalletId,
             decimal amount,
             string description = null);
+        Task<IEnumerable<WalletDto>> GetAllWalletsAsync(int page = 1, int pageSize = 20);
+        Task<int> GetTotalWalletCountAsync();
+        Task<decimal> GetTotalSystemBalanceAsync();
     }
 }

@@ -319,6 +319,17 @@ namespace Application.Services
             }
         }
 
+        public async Task<IEnumerable<WalletTransactionDto>> GetAllPendingTransactionsAsync(int page = 1, int pageSize = 20)
+        {
+            var transactions = await _transactionRepository.GetAllPendingTransactionsAsync(page, pageSize);
+            return transactions.Select(MapToDto);
+        }
+
+        public async Task<int> GetTotalPendingTransactionsAsync()
+        {
+            return await _transactionRepository.GetPendingTransactionsCountAsync();
+        }
+
         private static WalletTransactionDto MapToDto(WalletTransaction transaction)
         {
             return new WalletTransactionDto

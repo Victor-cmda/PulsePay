@@ -1,15 +1,11 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
-using Application.Validators;
 using Domain.Interfaces;
 using Domain.Models;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using Shared.Enums;
 using Shared.Exceptions;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using ValidationException = FluentValidation.ValidationException;
 
 namespace Application.Services
@@ -88,11 +84,13 @@ namespace Application.Services
                 PixKeyType = createDto.PixKeyType,
                 DocumentNumber = createDto.DocumentNumber,
                 AccountHolderName = createDto.AccountHolderName,
-                IsVerified = false
+                IsVerified = false,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow
             };
 
             var created = await _bankAccountRepository.CreateAsync(bankAccount, cancellationToken);
-            _logger.LogInformation("Bank account created: {Id} for seller {SellerId}", created.Id, created.SellerId);
+            _logger.LogInformation($"Bank account created: {created.Id} for seller {created.SellerId}");
 
             return MapToResponseDto(created);
         }
@@ -196,6 +194,34 @@ namespace Application.Services
             await _bankAccountRepository.UpdateAsync(bankAccount, cancellationToken);
 
             _logger.LogInformation("Bank account verified: {Id}", id);
+            return true;
+        }
+
+        public async Task<IEnumerable<BankAccountResponseDto>> GetUnverifiedAccountsAsync(int page = 1, int pageSize = 20)
+        {
+            var accounts = await _bankAccountRepository.GetUnverifiedAccountsAsync(page, pageSize);
+            return accounts.Select(MapToResponseDto);
+        }
+
+        public async Task<int> GetTotalAccountsCountAsync()
+        {
+            return await _bankAccountRepository.GetTotalCountAsync();
+        }
+
+        public async Task<bool> RejectBankAccountAsync(Guid id, string reason, CancellationToken cancellationToken = default)
+        {
+            var bankAccount = await _bankAccountRepository.GetByIdAsync(id, cancellationToken);
+            if (bankAccount == null)
+                throw new NotFoundException($"Conta bancária com ID {id} não encontrada");
+
+            bankAccount.Status = "Rejected";
+            bankAccount.RejectionReason = reason;
+            bankAccount.LastUpdatedAt = DateTime.UtcNow;
+
+            await _bankAccountRepository.UpdateAsync(bankAccount, cancellationToken);
+
+            _logger.LogInformation($"Conta bancária {id} rejeitada. Motivo: {reason}");
+
             return true;
         }
 

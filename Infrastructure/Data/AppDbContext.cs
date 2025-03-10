@@ -11,6 +11,10 @@ namespace Infrastructure.Data
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<BankAccount> BankAccounts { get; set; }
+        public DbSet<Withdraw> Withdraws { get; set; }
+        public DbSet<Deposit> Deposits { get; set; }
+        public DbSet<CustomerPayout> CustomerPayouts { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -81,6 +85,57 @@ namespace Infrastructure.Data
                 entity.HasIndex(e => new { e.BankCode, e.AccountNumber, e.BranchNumber }).HasName("IX_BankAccounts_AccountDetails");
                 entity.HasIndex(e => new { e.PixKey, e.PixKeyType }).HasName("IX_BankAccounts_PixKey").IsUnique().HasFilter("\"PIXKey\" IS NOT NULL AND \"PIXKeyType\" IS NOT NULL");
                 entity.HasIndex(e => e.SellerId).HasName("IX_BankAccounts_SellerId");
+            });
+
+            modelBuilder.Entity<Withdraw>(entity =>
+            {
+                entity.ToTable("Withdraws");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.WithdrawMethod).HasMaxLength(50);
+                entity.Property(e => e.RejectionReason).HasMaxLength(500);
+                entity.Property(e => e.ApprovedBy).HasMaxLength(50);
+
+                entity.HasOne(e => e.BankAccount)
+                    .WithMany()
+                    .HasForeignKey(e => e.BankAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Deposit>(entity =>
+            {
+                entity.ToTable("Deposits");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.TransactionId).HasMaxLength(100);
+                entity.Property(e => e.PaymentMethod).HasMaxLength(50);
+
+                entity.HasIndex(e => e.TransactionId);
+            });
+
+            modelBuilder.Entity<CustomerPayout>(entity =>
+            {
+                entity.ToTable("CustomerPayouts");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.CustomerName).HasMaxLength(100);
+                entity.Property(e => e.CustomerEmail).HasMaxLength(100);
+                entity.Property(e => e.CustomerDocument).HasMaxLength(50);
+                entity.Property(e => e.CustomerDocumentType).HasMaxLength(20);
+                entity.Property(e => e.PixKey).HasMaxLength(100);
+                entity.Property(e => e.PixKeyType).HasMaxLength(20);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.RejectionReason).HasMaxLength(500);
+
+                entity.HasOne(p => p.Transaction)
+                      .WithMany()
+                      .HasForeignKey(p => p.TransactionId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(p => p.TransactionId).IsUnique();
             });
         }
     }

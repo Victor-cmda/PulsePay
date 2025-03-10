@@ -464,6 +464,57 @@ namespace Presentation.API.Controllers
             }
         }
 
+        [HttpGet("admin/all")]
+        [Authorize(Policy = "AdminPolicy")]  // Apenas admin pode acessar
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<WalletDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllWallets([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                _logger.LogInformation("Admin obtendo todas as carteiras");
+                // Assumindo que você adicionará este método ao service
+                var wallets = await _walletService.GetAllWalletsAsync(page, pageSize);
+                return Ok(new ApiResponse<IEnumerable<WalletDto>>(wallets));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter todas as carteiras");
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
+            }
+        }
+
+        [HttpPut("admin/{id:guid}/balance")]
+        [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResponse<WalletDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> AdminUpdateBalance(Guid id, [FromBody] WalletUpdateDto updateDto)
+        {
+            try
+            {
+                _logger.LogInformation("Admin atualizando saldo para a carteira {WalletId}", id);
+                var wallet = await _walletService.UpdateBalanceAsync(id, updateDto);
+                return Ok(new ApiResponse<WalletDto>(wallet));
+            }
+            catch (NotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Carteira não encontrada com ID {WalletId}", id);
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (ValidationException ex)
+            {
+                _logger.LogWarning(ex, "Validação falhou ao atualizar saldo");
+                return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar saldo para a carteira {WalletId}", id);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError, "Ocorreu um erro interno ao processar sua solicitação."));
+            }
+        }
+
         /// <summary>
         /// Obtém o saldo disponível de uma carteira
         /// </summary>

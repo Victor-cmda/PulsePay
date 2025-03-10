@@ -13,5 +13,7 @@ namespace Domain.Interfaces
         Task<WalletTransaction> UpdateAsync(WalletTransaction transaction);
         Task<decimal> GetWalletBalanceAsync(Guid walletId);
         Task<int> GetTransactionCountAsync(Guid walletId, DateTime? startDate = null, DateTime? endDate = null, TransactionType? type = null, TransactionStatus? status = null);
+        Task<List<WalletTransaction>> GetAllPendingTransactionsAsync(int page = 1, int pageSize = 20);
+        Task<int> GetPendingTransactionsCountAsync();
     }
 }
