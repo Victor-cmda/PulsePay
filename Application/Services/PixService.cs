@@ -1,12 +1,7 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Application.Services
 {
@@ -60,10 +55,10 @@ namespace Application.Services
             }
 
             _logger.LogInformation(
-                "Validação interna de chave PIX: {PixKey}, Tipo: {PixKeyType}, Resultado: {IsValid}",
+                "Validação de chave PIX: {PixKey}, Tipo: {PixKeyType}, Resultado: {IsValid}",
                 pixKey, pixKeyType, isValid);
 
-            // Retorna resultado da validação
+            // Retorna resultado da validação com validationId
             var result = new PixKeyValidationDto
             {
                 IsValid = isValid,
@@ -79,20 +74,24 @@ namespace Application.Services
             return Task.FromResult(result);
         }
 
-        public Task<PixPaymentConfirmationDto> RegisterManualPaymentAsync(
-            Guid payoutId, decimal value, string proofReference, string adminId)
+        public Task<PixPaymentConfirmationDto> ConfirmPixPaymentAsync(string validationId, decimal value)
         {
-            // Aqui apenas registramos que o administrador confirmou o pagamento manual
-            // com alguma referência de comprovante
+            // Em uma aplicação real, aqui você se comunicaria com a API do banco
+            // para efetuar o pagamento PIX usando o validationId
+
             _logger.LogInformation(
-                "Pagamento manual registrado: {PayoutId}, Valor: {Value}, Referência: {Reference}, Admin: {AdminId}",
-                payoutId, value, proofReference, adminId);
+                "Confirmando pagamento PIX: ValidaçãoID: {ValidationId}, Valor: {Value}",
+                validationId, value);
+
+            // Gera um ID de pagamento para referência
+            string paymentId = Guid.NewGuid().ToString();
 
             var result = new PixPaymentConfirmationDto
             {
                 Success = true,
-                PaymentId = payoutId.ToString(),
-                PaymentProofId = proofReference
+                PaymentId = paymentId,
+                PaymentProofId = $"PROOF-{paymentId}",
+                ErrorMessage = null
             };
 
             return Task.FromResult(result);

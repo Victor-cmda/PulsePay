@@ -208,7 +208,7 @@ namespace Presentation.API
 
         [HttpPost("admin/{id:guid}/confirm")]
         [Authorize(Policy = "AdminPolicy")]
-        [ProducesResponseType(typeof(ApiResponse<CustomerPayoutDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<CustomerPayoutResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> ConfirmPayout(Guid id, [FromBody] PayoutConfirmationWithProofDto confirmationDto)
         {
             try
@@ -220,8 +220,8 @@ namespace Presentation.API
                     ? confirmationDto.ProofReference
                 : $"MANUAL_{Guid.NewGuid()}";
 
-                var payout = await _customerPayoutService.ConfirmPayoutAsync(id, confirmationDto.Value, proofReference, adminId);
-                return Ok(new ApiResponse<CustomerPayoutDto>(payout));
+                var payout = await _customerPayoutService.ConfirmPayoutAsync(id, proofReference, adminId);
+                return Ok(new ApiResponse<CustomerPayoutResponseDto>(payout));
             }
             catch (NotFoundException ex)
             {
@@ -234,6 +234,55 @@ namespace Presentation.API
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao confirmar pagamento {PayoutId}", id);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError,
+                    "Ocorreu um erro interno ao processar sua solicitação."));
+            }
+        }
+
+
+        [HttpPost("admin/{id:guid}/reject")]
+        [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResponse<CustomerPayoutResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RejectPayout(Guid id, [FromBody] string reason)
+        {
+            try
+            {
+                var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                var payout = await _customerPayoutService.RejectPayoutAsync(id, reason, adminId);
+                return Ok(new ApiResponse<CustomerPayoutResponseDto>(payout));
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new ApiResponse<object>(HttpStatusCode.NotFound, ex.Message));
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao rejeitar pagamento {PayoutId}", id);
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError,
+                    "Ocorreu um erro interno ao processar sua solicitação."));
+            }
+        }
+
+        [HttpGet("admin/pending")]
+        [Authorize(Policy = "AdminPolicy")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<CustomerPayoutResponseDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPendingPayouts(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var payouts = await _customerPayoutService.GetPendingPayoutsAsync(page, pageSize);
+                return Ok(new ApiResponse<IEnumerable<CustomerPayoutResponseDto>>(payouts));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter pagamentos pendentes");
                 return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError,
                     "Ocorreu um erro interno ao processar sua solicitação."));
             }

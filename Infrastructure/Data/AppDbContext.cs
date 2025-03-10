@@ -119,23 +119,29 @@ namespace Infrastructure.Data
             {
                 entity.ToTable("CustomerPayouts");
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
-                entity.Property(e => e.CustomerName).HasMaxLength(100);
-                entity.Property(e => e.CustomerEmail).HasMaxLength(100);
-                entity.Property(e => e.CustomerDocument).HasMaxLength(50);
-                entity.Property(e => e.CustomerDocumentType).HasMaxLength(20);
-                entity.Property(e => e.PixKey).HasMaxLength(100);
-                entity.Property(e => e.PixKeyType).HasMaxLength(20);
+
+                entity.Property(e => e.SellerId).IsRequired();
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+                entity.Property(e => e.RequestedAt).IsRequired();
+                entity.Property(e => e.ProcessedAt);
+
+                entity.Property(e => e.PixKey).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PixKeyType).HasMaxLength(20).IsRequired();
                 entity.Property(e => e.Description).HasMaxLength(500);
                 entity.Property(e => e.RejectionReason).HasMaxLength(500);
 
-                entity.HasOne(p => p.Transaction)
-                      .WithMany()
-                      .HasForeignKey(p => p.TransactionId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(e => e.ValidationId).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.ValidatedAt);
 
-                entity.HasIndex(p => p.TransactionId).IsUnique();
+                entity.Property(e => e.ConfirmedByAdminId).HasMaxLength(50);
+                entity.Property(e => e.ConfirmedAt);
+                entity.Property(e => e.PaymentId).HasMaxLength(100);
+                entity.Property(e => e.PaymentProofId).HasMaxLength(100);
+
+                entity.HasIndex(e => e.SellerId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.ValidationId).IsUnique();
             });
         }
     }

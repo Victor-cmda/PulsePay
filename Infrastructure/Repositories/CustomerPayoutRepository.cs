@@ -32,14 +32,13 @@ namespace Infrastructure.Repositories
         public async Task<CustomerPayout> GetByIdAsync(Guid id)
         {
             return await _context.CustomerPayouts
-                .Include(p => p.Transaction)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public async Task<CustomerPayout> GetByTransactionIdAsync(Guid transactionId)
+        public async Task<CustomerPayout> GetByValidationIdAsync(string validationId)
         {
             return await _context.CustomerPayouts
-                .FirstOrDefaultAsync(p => p.TransactionId == transactionId);
+                .FirstOrDefaultAsync(p => p.ValidationId == validationId);
         }
 
         public async Task<IEnumerable<CustomerPayout>> GetBySellerIdAsync(Guid sellerId, int page = 1, int pageSize = 20)
