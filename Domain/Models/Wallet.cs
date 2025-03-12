@@ -21,9 +21,9 @@ namespace Domain.Models
         public WalletType WalletType { get; set; }
         public bool IsDefault { get; set; }
         public WithdrawStatus Status { get; set; } = WithdrawStatus.Pending;
-        public string ApprovedBy { get; set; }
+        public string? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }
-        public string RejectionReason { get; set; }
+        public string? RejectionReason { get; set; }
         public DateTime LastUpdateAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public virtual ICollection<WalletTransaction> Transactions { get; set; }
