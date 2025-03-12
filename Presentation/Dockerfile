@@ -1,24 +1,41 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-WORKDIR /app
-EXPOSE 80
-
 # Estágio de build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["Presentation/Presentation.csproj", "Presentation/"]
-RUN dotnet restore "./Presentation/Presentation.csproj"
+WORKDIR /app
+
+# Copiar os arquivos csproj e restaurar dependências
+COPY ["src/Presentation/Presentation.csproj", "src/Presentation/"]
+COPY ["src/Application/Application.csproj", "src/Application/"]
+COPY ["src/Domain/Domain.csproj", "src/Domain/"]
+COPY ["src/Infrastructure/Infrastructure.csproj", "src/Infrastructure/"]
+COPY ["src/Shared/Shared.csproj", "src/Shared/"]
+RUN dotnet restore "src/Presentation/Presentation.csproj"
+
+# Copiar todo o código fonte
 COPY . .
-WORKDIR "/src/Presentation"
-RUN dotnet build "./Presentation.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Compilar o projeto
+WORKDIR /app/src/Presentation
+RUN dotnet build "Presentation.csproj" -c Release -o /app/build
 
 # Estágio de publicação
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Presentation.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Presentation.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Estágio final
-FROM base AS final
+# Estágio final com runtime ASP.NET
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Configurar variáveis de ambiente
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:80
+
+# Copiar arquivos de configuração
+COPY ["src/Presentation/appsettings.json", "./"]
+COPY ["src/Presentation/appsettings.Production.json", "./"]
+
+# Expor porta
+EXPOSE 80
+
+# Iniciar a aplicação
 ENTRYPOINT ["dotnet", "Presentation.dll"]
