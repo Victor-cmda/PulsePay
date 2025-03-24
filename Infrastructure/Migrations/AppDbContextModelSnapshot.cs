@@ -103,6 +103,13 @@ namespace Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("CreatedAt");
 
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<string>("Details")
                         .IsRequired()
                         .HasColumnType("text")
@@ -133,6 +140,19 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("OrderId");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("PaymentType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -150,9 +170,7 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("TransactionId")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("TransactionId");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -305,6 +323,61 @@ namespace Infrastructure.Migrations
                     b.HasIndex("BankAccountId");
 
                     b.ToTable("Withdraws", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Models.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("Id");
+
+                    b.Property<string>("ClientUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("ClientUrl");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("Description");
+
+                    b.Property<DateTime?>("LastAttempt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("LastAttempt");
+
+                    b.Property<DateTime>("NextAttempt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("NextAttempt");
+
+                    b.Property<int>("SendAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("SendAttempts");
+
+                    b.Property<string>("SendStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("SendStatus");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("Status");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId");
+
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Models.Withdraw", b =>

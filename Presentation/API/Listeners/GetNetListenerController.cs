@@ -1,6 +1,6 @@
 using Application.DTOs;
+using Application.Interfaces;
 using Domain.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.API
@@ -10,32 +10,50 @@ namespace Presentation.API
     [Route("api/getnet")]
     public class GetNetListenerController : ControllerBase
     {
-        private readonly IPaymentService _paymentService;
+        private readonly IListenerService _listenerService;
 
-        public GetNetListenerController(IPaymentService paymentService)
+        public GetNetListenerController(IListenerService listenerService)
         {
-            _paymentService = paymentService;
+            _listenerService = listenerService;
         }
 
         [HttpGet("pix")]
-        public async Task<IActionResult> PixNotification([FromQuery] string payment_type,
-            [FromQuery] string customer_id,
-            [FromQuery] string order_id,
-            [FromQuery] string payment_id,
-            [FromQuery] int amount,
-            [FromQuery] string status,
-            [FromQuery] string transaction_id,
-            [FromQuery] string transaction_timestamp,
-            [FromQuery] string receiver_psp_name,
-            [FromQuery] string receiver_psp_code,
-            [FromQuery] string receiver_name,
-            [FromQuery] string receiver_cnpj,
-            [FromQuery] string receiver_cpf,
-            [FromQuery] string terminal_nsu)
+        public async Task<IActionResult> ReceivePaymentNotification([FromQuery] Dictionary<string, string> queryParams)
         {
-            Console.WriteLine($"Notificação de PIX Recebida: {payment_type}, {customer_id}, {order_id}, {payment_id}, {amount}, {status}, {transaction_id}, {transaction_timestamp}, {receiver_psp_name}, {receiver_psp_code}, {receiver_name}, {receiver_cnpj}, {receiver_cpf}, {terminal_nsu}");
+            try
+            {
+                string paymentType = queryParams.ContainsKey("payment_type") ? queryParams["payment_type"] : null;
+                string status = queryParams.ContainsKey("status") ? queryParams["status"] : null;
+                string orderId = queryParams.ContainsKey("order_id") ? queryParams["order_id"] : null;
+                string transactionId = queryParams.ContainsKey("transaction_id") ? queryParams["transaction_id"] : null;
+                string customerId = queryParams.ContainsKey("customer_id") ? queryParams["customer_id"] : null;
+                string paymentId = queryParams.ContainsKey("payment_id") ? queryParams["payment_id"] : null;
+                string transactionTimestampStr = queryParams.ContainsKey("transaction_timestamp") ? queryParams["transaction_timestamp"] : null;
 
-            return Ok();
+                DateTime transactionTimestamp;
+                if (!DateTime.TryParse(transactionTimestampStr, out transactionTimestamp))
+                {
+                    return BadRequest("Invalid transaction_timestamp format.");
+                }
+
+                await _listenerService.GenerateNotification(new NotificationDto
+                {
+                    OrderId = orderId,
+                    Description = $"{status} AT {transactionTimestamp}",
+                    Status = status,
+                    TransactionId = transactionId,
+                    CustomerId = customerId,
+                    PaymentId = paymentId,
+                    PaymentType = paymentType,
+                    TransactionTimestamp = transactionTimestamp,
+                });
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("debit")]
@@ -91,7 +109,7 @@ namespace Presentation.API
             [FromQuery] string error_code,
             [FromQuery] string description_detail)
         {
-             Console.WriteLine($"Notificação de Boleto Recebida: {payment_type}, {order_id}, {payment_id}, {id}, {amount}, {status}, {bank}, {our_number}, {typeful_line}, {issue_date}, {expiration_date}, {error_code}, {description_detail}");
+            Console.WriteLine($"Notificação de Boleto Recebida: {payment_type}, {order_id}, {payment_id}, {id}, {amount}, {status}, {bank}, {our_number}, {typeful_line}, {issue_date}, {expiration_date}, {error_code}, {description_detail}");
 
             return Ok();
         }

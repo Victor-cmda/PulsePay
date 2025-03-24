@@ -38,5 +38,10 @@ namespace Infrastructure.Repositories
         {
             return await _context.Set<Transaction>().FindAsync(Id);
         }
+
+        public async Task<Transaction> GetByPaymentIdAsync(string paymentId)
+        {
+            return await _context.Set<Transaction>().FirstOrDefaultAsync(x => x.PaymentId == paymentId);
+        }
     }
 }

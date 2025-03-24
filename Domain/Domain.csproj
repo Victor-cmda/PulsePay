@@ -13,6 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Entities\Cielo\BankSlip\" />
+    <Folder Include="Entities\Cielo\Pix\" />
     <Folder Include="Entities\K8Pay\Pix\" />
   </ItemGroup>
 

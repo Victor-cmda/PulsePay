@@ -23,6 +23,8 @@ namespace Infrastructure.Factories
                     return _serviceProvider.GetRequiredService<GetNetAdapter>();
                 case "K8Pay":
                     return _serviceProvider.GetRequiredService<K8PayAdapter>();
+                case "Cielo":
+                    return _serviceProvider.GetRequiredService<CieloAdapter>();
                 default:
                     throw new ArgumentException("Unsupported gateway type");
             }
@@ -34,6 +36,7 @@ namespace Infrastructure.Factories
             {
                 "Pix" => _configuration["PaymentService:Pix:GatewayType"],
                 "BankSlip" => _configuration["PaymentService:BankSlip:GatewayType"],
+                "CreditCard" => _configuration["PaymentService:CreditCard:GatewayType"],
                 _ => throw new ArgumentException("Unsupported service type", nameof(requestType))
             };
         }
