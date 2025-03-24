@@ -143,6 +143,7 @@ namespace Infrastructure.DI
             services.AddScoped<IDepositService, DepositService>();
             services.AddScoped<ICustomerPayoutService, CustomerPayoutService>();
             services.AddScoped<IPixService, PixService>();
+            services.AddScoped<IListenerService, ListenerService>();
 
             return services;
         }
@@ -157,6 +158,7 @@ namespace Infrastructure.DI
             services.AddScoped<IWithdrawRepository, WithdrawRepository>();
             services.AddScoped<IDepositRepository, DepositRepository>();
             services.AddScoped<ICustomerPayoutRepository, CustomerPayoutRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
 
             return services;
         }

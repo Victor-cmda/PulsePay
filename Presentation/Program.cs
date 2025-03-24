@@ -1,3 +1,4 @@
+using Application.BackgroundService;
 using Infrastructure.DI;
 using Infrastructure.Middleware;
 using Serilog;
@@ -23,6 +24,8 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     serverOptions.Configure(builder.Configuration.GetSection("Kestrel"));
 });
 
+builder.Services.AddHttpClient();
+
 // Register services with extension methods
 builder.Services
     .AddApplicationAuthentication(builder.Configuration)
@@ -38,6 +41,7 @@ builder.Services
     .AddPaymentGatewayServices()
     .AddMappers()
     .AddValidators()
+    .AddHostedService<NotificationRetryService>()
     .AddEndpointsApiExplorer();
 
 var app = builder.Build();
