@@ -66,6 +66,8 @@ namespace Application.DTOs
         public string DocumentNumber { get; set; }
         public string AccountHolderName { get; set; }
         public bool IsVerified { get; set; }
+        public string? Status { get; set; }
+        public string? RejectionReason { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
     }

@@ -5,6 +5,8 @@
         Credit,
         Debit,
         Withdraw,
-        Refund
+        Refund,
+        Deposit,
+        Withdrawal,
     }
 }

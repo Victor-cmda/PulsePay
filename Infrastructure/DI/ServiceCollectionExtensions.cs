@@ -14,17 +14,15 @@ using FluentValidation;
 using Infrastructure.Adapters.PaymentGateway;
 using Infrastructure.Data;
 using Infrastructure.Factories;
-using Infrastructure.Middleware;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System;
+using System.Security.Claims;
 using System.Text;
 
 namespace Infrastructure.DI
@@ -51,7 +49,9 @@ namespace Infrastructure.DI
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtConfig["Issuer"],
                     ValidAudience = jwtConfig["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    NameClaimType = ClaimTypes.Name,
+                    RoleClaimType = ClaimTypes.Role
                 };
             });
 
@@ -62,6 +62,9 @@ namespace Infrastructure.DI
 
                 options.AddPolicy("ClientPolicy", policy =>
                     policy.RequireClaim("TokenType", "Client"));
+
+                options.AddPolicy("AdminPolicy", policy =>
+                    policy.RequireRole("Admin"));
             });
 
             return services;
@@ -133,10 +136,13 @@ namespace Infrastructure.DI
             services.AddTransient<FileService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IWalletService, WalletService>();
-            services.AddScoped<IWithdrawService, WithdrawService>();
             services.AddScoped<IBankAccountService, BankAccountService>();
             services.AddScoped<IWalletTransactionService, WalletTransactionService>();
             services.AddTransient<ITransactionService, TransactionService>();
+            services.AddScoped<IWithdrawService, WithdrawService>();
+            services.AddScoped<IDepositService, DepositService>();
+            services.AddScoped<ICustomerPayoutService, CustomerPayoutService>();
+            services.AddScoped<IPixService, PixService>();
 
             return services;
         }
@@ -146,9 +152,11 @@ namespace Infrastructure.DI
             // Repositories
             services.AddTransient<ITransactionRepository, TransactionRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
-            services.AddScoped<IWithdrawRepository, WithdrawRepository>();
             services.AddScoped<IBankAccountRepository, BankAccountRepository>();
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+            services.AddScoped<IWithdrawRepository, WithdrawRepository>();
+            services.AddScoped<IDepositRepository, DepositRepository>();
+            services.AddScoped<ICustomerPayoutRepository, CustomerPayoutRepository>();
 
             return services;
         }

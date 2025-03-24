@@ -118,23 +118,23 @@ namespace Presentation.API
             }
         }
 
-        [HttpPost("{id:guid}/verify")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> VerifyBankAccount(Guid id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var result = await _bankAccountService.VerifyBankAccountAsync(id, cancellationToken);
-                return Ok(new { verified = result });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error verifying bank account with ID {BankAccountId}", id);
-                return StatusCode(500, "An error occurred while verifying the bank account.");
-            }
-        }
+        //[HttpPost("{id:guid}/verify")]
+        //[ProducesResponseType(StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status404NotFound)]
+        //[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        //public async Task<IActionResult> VerifyBankAccount(Guid id, CancellationToken cancellationToken = default)
+        //{
+        //    try
+        //    {
+        //        var result = await _bankAccountService.VerifyBankAccountAsync(id, cancellationToken);
+        //        return Ok(new { verified = result });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error verifying bank account with ID {BankAccountId}", id);
+        //        return StatusCode(500, "An error occurred while verifying the bank account.");
+        //    }
+        //}
 
         [HttpPost("validate")]
         [ProducesResponseType(typeof(BankAccountValidationDto), StatusCodes.Status200OK)]

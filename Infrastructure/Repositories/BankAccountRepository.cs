@@ -102,5 +102,20 @@ namespace Infrastructure.Repositories
                     b.AccountType == BankAccountType.PIX,
                     cancellationToken);
         }
+
+        public async Task<IEnumerable<BankAccount>> GetUnverifiedAccountsAsync(int page = 1, int pageSize = 20)
+        {
+            return await _context.BankAccounts
+                .Where(b => !b.IsVerified)
+                .OrderBy(b => b.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetTotalCountAsync()
+        {
+            return await _context.BankAccounts.CountAsync();
+        }
     }
 }

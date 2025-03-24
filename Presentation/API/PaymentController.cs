@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.BankSlip;
 using Application.DTOs.Pix;
+using Application.Interfaces;
 using Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,13 @@ namespace Presentation.API
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
+        private readonly IDepositService _depositService;
         private readonly ILogger<PaymentsController> _logger;
         private readonly string _fileBasePath;
-        public PaymentsController(IPaymentService paymentService, ILogger<PaymentsController> logger, IConfiguration configuration)
+        public PaymentsController(IPaymentService paymentService, IDepositService depositService, ILogger<PaymentsController> logger, IConfiguration configuration)
         {
             _paymentService = paymentService;
+            _depositService = depositService;
             _fileBasePath = configuration["FileStorage:BasePath"];
             _logger = logger;
         }
@@ -97,6 +100,28 @@ namespace Presentation.API
             catch (Exception ex)
             {
                 return BadRequest(new { Error = ex.Message });
+            }
+        }
+
+        [HttpGet("notify-pix")]
+        [AllowAnonymous]
+        public async Task<IActionResult> NotifyPix(
+            [FromQuery] string transaction_id,
+            [FromQuery] string status,
+            [FromQuery] int amount)
+        {
+            try
+            {
+                decimal decimalAmount = amount / 100m;
+
+                await _depositService.ProcessDepositCallbackAsync(transaction_id, status, decimalAmount);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar notificação PIX: {TransactionId}", transaction_id);
+                return Ok();
             }
         }
     }

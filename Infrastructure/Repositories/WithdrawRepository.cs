@@ -2,6 +2,7 @@
 using Domain.Models;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Shared.Enums;
 
 namespace Infrastructure.Repositories
 {
@@ -14,6 +15,20 @@ namespace Infrastructure.Repositories
             _context = context;
         }
 
+        public async Task<Withdraw> CreateAsync(Withdraw withdraw)
+        {
+            _context.Withdraws.Add(withdraw);
+            await _context.SaveChangesAsync();
+            return withdraw;
+        }
+
+        public async Task<Withdraw> UpdateAsync(Withdraw withdraw)
+        {
+            _context.Withdraws.Update(withdraw);
+            await _context.SaveChangesAsync();
+            return withdraw;
+        }
+
         public async Task<Withdraw> GetByIdAsync(Guid id)
         {
             return await _context.Withdraws
@@ -21,7 +36,7 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(w => w.Id == id);
         }
 
-        public async Task<IEnumerable<Withdraw>> GetBySellerIdAsync(Guid sellerId, int page = 1, int pageSize = 10)
+        public async Task<IEnumerable<Withdraw>> GetBySellerIdAsync(Guid sellerId, int page = 1, int pageSize = 20)
         {
             return await _context.Withdraws
                 .Include(w => w.BankAccount)
@@ -32,38 +47,27 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Withdraw> CreateAsync(Withdraw withdraw)
-        {
-            withdraw.RequestedAt = DateTime.UtcNow;
-            _context.Withdraws.Add(withdraw);
-            await _context.SaveChangesAsync();
-            return withdraw;
-        }
-
-        public async Task<Withdraw> UpdateAsync(Withdraw withdraw)
-        {
-            withdraw.ProcessedAt = DateTime.UtcNow;
-            _context.Withdraws.Update(withdraw);
-            await _context.SaveChangesAsync();
-            return withdraw;
-        }
-
-        public async Task<IEnumerable<Withdraw>> GetPendingWithdrawsAsync()
+        public async Task<IEnumerable<Withdraw>> GetByStatusAsync(WithdrawStatus status, int page = 1, int pageSize = 20)
         {
             return await _context.Withdraws
                 .Include(w => w.BankAccount)
-                .Where(w => w.Status == "Pending")
-                .OrderBy(w => w.RequestedAt)
+                .Where(w => w.Status == status)
+                .OrderByDescending(w => w.RequestedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
         }
 
-        public async Task<decimal> GetTotalWithdrawnAmountAsync(Guid sellerId, DateTime startDate, DateTime endDate)
+        public async Task<int> GetCountByStatusAsync(WithdrawStatus status)
         {
             return await _context.Withdraws
-                .Where(w => w.SellerId == sellerId &&
-                           w.Status == "Completed" &&
-                           w.RequestedAt >= startDate &&
-                           w.RequestedAt <= endDate)
+                .CountAsync(w => w.Status == status);
+        }
+
+        public async Task<decimal> GetTotalAmountByStatusAsync(WithdrawStatus status)
+        {
+            return await _context.Withdraws
+                .Where(w => w.Status == status)
                 .SumAsync(w => w.Amount);
         }
     }

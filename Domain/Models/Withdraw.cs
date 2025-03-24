@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Shared.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Domain.Models
@@ -6,7 +7,6 @@ namespace Domain.Models
     public class Withdraw
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
         [Required]
@@ -17,24 +17,37 @@ namespace Domain.Models
         public decimal Amount { get; set; }
 
         [Required]
-        [StringLength(20)]
-        public string Status { get; set; }
+        public WithdrawStatus Status { get; set; } = WithdrawStatus.Pending;
 
         [Required]
         [StringLength(50)]
-        public string WithdrawMethod { get; set; }
+        public string WithdrawMethod { get; set; } // PIX, TED, etc.
 
+        [Required]
         public DateTime RequestedAt { get; set; }
 
         public DateTime? ProcessedAt { get; set; }
 
         [Required]
         public Guid BankAccountId { get; set; }
-        public BankAccount BankAccount { get; set; }
+
+        [ForeignKey("BankAccountId")]
+        public virtual BankAccount BankAccount { get; set; }
 
         [StringLength(500)]
-        public string? FailureReason { get; set; }
+        public string RejectionReason { get; set; }
 
-        public string? TransactionReceipt { get; set; }
+        [Column(TypeName = "text")]
+        public string TransactionReceipt { get; set; }
+
+        [StringLength(50)]
+        public string ApprovedBy { get; set; } // ID do admin que aprovou
+
+        public DateTime? ApprovedAt { get; set; }
+
+        public Guid WalletId { get; set; }
+
+        [ForeignKey("WalletId")]
+        public virtual Wallet Wallet { get; set; }
     }
 }

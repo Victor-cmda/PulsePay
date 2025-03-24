@@ -3,6 +3,7 @@ using Application.Interfaces;
 using Domain.Interfaces;
 using Domain.Models;
 using Microsoft.Extensions.Logging;
+using Shared.Enums;
 using Shared.Exceptions;
 
 namespace Application.Services
@@ -11,135 +12,192 @@ namespace Application.Services
     {
         private readonly IWithdrawRepository _withdrawRepository;
         private readonly IWalletService _walletService;
+        private readonly IBankAccountService _bankAccountService;
         private readonly ILogger<WithdrawService> _logger;
 
         public WithdrawService(
             IWithdrawRepository withdrawRepository,
             IWalletService walletService,
+            IBankAccountService bankAccountService,
             ILogger<WithdrawService> logger)
         {
             _withdrawRepository = withdrawRepository;
             _walletService = walletService;
+            _bankAccountService = bankAccountService;
             _logger = logger;
         }
 
-        public async Task<WithdrawResponseDto> RequestWithdrawAsync(WithdrawCreateDto createDto)
+        public async Task<WithdrawDto> RequestWithdrawAsync(WithdrawRequestDto request)
         {
-            // Verificar se há saldo disponível
-            var hasSufficientFunds = await _walletService.HasSufficientFundsAsync(createDto.SellerId, createDto.Amount);
-            if (!hasSufficientFunds)
-                throw new InsufficientFundsException("Insufficient funds for withdrawal");
+            // Verificar se a conta bancária existe e está verificada
+            var bankAccount = await _bankAccountService.GetBankAccountAsync(request.BankAccountId);
+            if (!bankAccount.IsVerified)
+                throw new ValidationException("A conta bancária selecionada não está verificada");
 
-            // Criar o saque
+            // Verificar se o saldo é suficiente
+            var hasBalance = await _walletService.HasSufficientFundsAsync(request.WalletId, request.Amount);
+            if (!hasBalance)
+                throw new InsufficientFundsException("Saldo insuficiente para realizar este saque");
+
+            // Deduzir o valor da carteira (ou colocar em pending, dependendo da sua lógica)
+            await _walletService.DeductFundsAsync(request.WalletId, new WalletOperationDto
+            {
+                Amount = request.Amount,
+                Description = "Solicitação de saque - Aguardando aprovação",
+                Reference = $"WITHDRAW_REQUEST_{Guid.NewGuid()}"
+            });
+
+            // Criar a solicitação de saque
             var withdraw = new Withdraw
             {
-                SellerId = createDto.SellerId,
-                Amount = createDto.Amount,
-                Status = "Pending",
-                WithdrawMethod = createDto.WithdrawMethod,
-                BankAccountId = createDto.BankAccountId
+                Id = Guid.NewGuid(),
+                SellerId = request.SellerId,
+                Amount = request.Amount,
+                Status = WithdrawStatus.Pending,
+                WithdrawMethod = request.Method, // PIX, TED, etc.
+                RequestedAt = DateTime.UtcNow,
+                BankAccountId = request.BankAccountId,
             };
 
-            // Deduzir o valor da carteira
-            await _walletService.DeductFundsAsync(createDto.SellerId, createDto.Amount);
+            var result = await _withdrawRepository.CreateAsync(withdraw);
+            _logger.LogInformation("Solicitação de saque criada: {WithdrawId} para vendedor {SellerId} - Valor: {Amount}",
+                result.Id, result.SellerId, result.Amount);
 
-            // Salvar o saque
-            var created = await _withdrawRepository.CreateAsync(withdraw);
-            _logger.LogInformation($"Withdraw requested: {created.Id} for seller {created.SellerId}");
-
-            return MapToResponseDto(created);
+            return MapToDto(result);
         }
 
-        public async Task<WithdrawResponseDto> GetWithdrawAsync(Guid id)
+        public async Task<WithdrawDto> GetWithdrawAsync(Guid id)
         {
             var withdraw = await _withdrawRepository.GetByIdAsync(id);
             if (withdraw == null)
-                throw new NotFoundException($"Withdraw {id} not found");
+                throw new NotFoundException($"Saque com ID {id} não encontrado");
 
-            return MapToResponseDto(withdraw);
+            return MapToDto(withdraw);
         }
 
-        public async Task<IEnumerable<WithdrawResponseDto>> GetWithdrawsBySellerAsync(Guid sellerId, int page = 1, int pageSize = 10)
+        public async Task<IEnumerable<WithdrawDto>> GetWithdrawsBySellerIdAsync(Guid sellerId, int page = 1, int pageSize = 20)
         {
             var withdraws = await _withdrawRepository.GetBySellerIdAsync(sellerId, page, pageSize);
-            return withdraws.Select(MapToResponseDto);
+            return withdraws.Select(MapToDto);
         }
 
-        public async Task<WithdrawResponseDto> ProcessWithdrawAsync(Guid id, WithdrawUpdateDto updateDto)
+        public async Task<IEnumerable<WithdrawDto>> GetPendingWithdrawsAsync(int page = 1, int pageSize = 20)
+        {
+            var withdraws = await _withdrawRepository.GetByStatusAsync(WithdrawStatus.Pending, page, pageSize);
+            return withdraws.Select(MapToDto);
+        }
+
+        public async Task<WithdrawDto> ApproveWithdrawAsync(Guid id, string adminId)
         {
             var withdraw = await _withdrawRepository.GetByIdAsync(id);
             if (withdraw == null)
-                throw new NotFoundException($"Withdraw {id} not found");
+                throw new NotFoundException($"Saque com ID {id} não encontrado");
 
-            if (withdraw.Status != "Pending")
-                throw new InvalidOperationException("Only pending withdraws can be processed");
+            if (withdraw.Status != WithdrawStatus.Pending)
+                throw new ValidationException($"Não é possível aprovar saque que não está pendente. Status atual: {withdraw.Status}");
 
-            withdraw.Status = updateDto.Status;
-            withdraw.FailureReason = updateDto.FailureReason;
-            withdraw.TransactionReceipt = updateDto.TransactionReceipt;
+            withdraw.Status = WithdrawStatus.Approved;
+            withdraw.ApprovedBy = adminId;
+            withdraw.ApprovedAt = DateTime.UtcNow;
 
-            // Se o saque falhou, devolver o dinheiro para a carteira
-            if (updateDto.Status == "Failed")
+            var result = await _withdrawRepository.UpdateAsync(withdraw);
+            _logger.LogInformation("Saque {WithdrawId} aprovado pelo admin {AdminId}", id, adminId);
+
+            return MapToDto(result);
+        }
+
+        public async Task<WithdrawDto> RejectWithdrawAsync(Guid id, string reason, string adminId)
+        {
+            var withdraw = await _withdrawRepository.GetByIdAsync(id);
+            if (withdraw == null)
+                throw new NotFoundException($"Saque com ID {id} não encontrado");
+
+            if (withdraw.Status != WithdrawStatus.Pending)
+                throw new ValidationException($"Não é possível rejeitar saque que não está pendente. Status atual: {withdraw.Status}");
+
+            if (withdraw.WalletId != null)
+                throw new ValidationException("Não é possível rejeitar saque sem carteira associada");
+
+            await _walletService.AddFundsAsync(withdraw.WalletId, new WalletOperationDto
             {
-                await _walletService.AddFundsAsync(withdraw.SellerId, withdraw.Amount);
-                _logger.LogInformation($"Funds returned to wallet for failed withdraw {withdraw.Id}");
-            }
+                Amount = withdraw.Amount,
+                Description = $"Estorno de solicitação de saque - Rejeitado: {reason}",
+                Reference = $"WITHDRAW_REJECT_{withdraw.Id}"
+            });
 
-            var updated = await _withdrawRepository.UpdateAsync(withdraw);
-            _logger.LogInformation($"Withdraw {updated.Id} processed with status: {updated.Status}");
+            withdraw.Status = WithdrawStatus.Rejected;
+            withdraw.RejectionReason = reason;
+            withdraw.ProcessedAt = DateTime.UtcNow;
 
-            return MapToResponseDto(updated);
+            var result = await _withdrawRepository.UpdateAsync(withdraw);
+            _logger.LogInformation("Saque {WithdrawId} rejeitado pelo admin {AdminId}. Motivo: {Reason}",
+                id, adminId, reason);
+
+            return MapToDto(result);
         }
 
-        public async Task<WithdrawSummaryDto> GetWithdrawSummaryAsync(Guid sellerId, DateTime startDate, DateTime endDate)
+        public async Task<WithdrawDto> ProcessWithdrawAsync(Guid id, string transactionReceipt)
         {
-            var totalWithdrawn = await _withdrawRepository.GetTotalWithdrawnAmountAsync(sellerId, startDate, endDate);
+            var withdraw = await _withdrawRepository.GetByIdAsync(id);
+            if (withdraw == null)
+                throw new NotFoundException($"Saque com ID {id} não encontrado");
 
-            var withdraws = await _withdrawRepository.GetBySellerIdAsync(sellerId);
-            var pendingAmount = withdraws
-                .Where(w => w.Status == "Pending")
-                .Sum(w => w.Amount);
+            if (withdraw.Status != WithdrawStatus.Approved)
+                throw new ValidationException($"Não é possível processar saque que não está aprovado. Status atual: {withdraw.Status}");
 
-            return new WithdrawSummaryDto
-            {
-                TotalWithdrawn = totalWithdrawn,
-                TotalRequests = withdraws.Count(),
-                PendingAmount = pendingAmount,
-                Period = startDate
-            };
+            withdraw.Status = WithdrawStatus.Completed;
+            withdraw.ProcessedAt = DateTime.UtcNow;
+            withdraw.TransactionReceipt = transactionReceipt;
+
+            var result = await _withdrawRepository.UpdateAsync(withdraw);
+            _logger.LogInformation("Saque {WithdrawId} processado com sucesso. Comprovante: {Receipt}",
+                id, transactionReceipt);
+
+            return MapToDto(result);
         }
 
-        public async Task<IEnumerable<WithdrawResponseDto>> GetPendingWithdrawsAsync()
+        public async Task<int> GetPendingWithdrawsCountAsync()
         {
-            var pendingWithdraws = await _withdrawRepository.GetPendingWithdrawsAsync();
-            return pendingWithdraws.Select(MapToResponseDto);
+            return await _withdrawRepository.GetCountByStatusAsync(WithdrawStatus.Pending);
         }
 
-        private static WithdrawResponseDto MapToResponseDto(Withdraw withdraw)
+        public async Task<decimal> GetTotalPendingWithdrawAmountAsync()
         {
-            return new WithdrawResponseDto
+            return await _withdrawRepository.GetTotalAmountByStatusAsync(WithdrawStatus.Pending);
+        }
+
+        private WithdrawDto MapToDto(Withdraw withdraw)
+        {
+            return new WithdrawDto
             {
                 Id = withdraw.Id,
                 SellerId = withdraw.SellerId,
                 Amount = withdraw.Amount,
-                Status = withdraw.Status,
+                Status = withdraw.Status.ToString(),
                 WithdrawMethod = withdraw.WithdrawMethod,
                 RequestedAt = withdraw.RequestedAt,
                 ProcessedAt = withdraw.ProcessedAt,
-                BankAccount = new BankAccount
-                {
-                    Id = withdraw.BankAccount.Id,
-                    BankName = withdraw.BankAccount.BankName,
-                    AccountType = withdraw.BankAccount.AccountType,
-                    AccountNumber = withdraw.BankAccount.AccountNumber,
-                    BranchNumber = withdraw.BankAccount.BranchNumber,
-                    PixKeyType = withdraw.BankAccount.PixKeyType,
-                    PixKey = withdraw.BankAccount.PixKey,
-                },
-                FailureReason = withdraw.FailureReason,
-                TransactionReceipt = withdraw.TransactionReceipt
+                BankAccountId = withdraw.BankAccountId,
+                BankAccount = withdraw.BankAccount != null ? MapBankAccountToDto(withdraw.BankAccount) : null,
+                RejectionReason = withdraw.RejectionReason,
+                TransactionReceipt = withdraw.TransactionReceipt,
+                ApprovedAt = withdraw.ApprovedAt
+            };
+        }
+
+        private BankAccountDto MapBankAccountToDto(BankAccount bankAccount)
+        {
+            return new BankAccountDto
+            {
+                Id = bankAccount.Id,
+                BankName = bankAccount.BankName,
+                AccountType = bankAccount.AccountType.ToString(),
+                AccountNumber = bankAccount.AccountNumber,
+                BranchNumber = bankAccount.BranchNumber,
+                PixKey = bankAccount.PixKey,
+                PixKeyType = bankAccount.PixKeyType?.ToString(),
+                AccountHolderName = bankAccount.AccountHolderName
             };
         }
     }
-
 }
