@@ -26,5 +26,8 @@ namespace Application.DTOs
         public string PixKeyType { get; set; }
         public string ValidationId { get; set; }
         public string PaymentId { get; set; }
+        //public string KeyOwnerName { get; set; }
+        //public string KeyOwnerDocument { get; set; }
+        //public string BankName { get; set; }
     }
 }

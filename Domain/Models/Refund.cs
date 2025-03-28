@@ -39,5 +39,10 @@ namespace Domain.Models
 
         [StringLength(255)]
         public string FailReason { get; set; }
+
+        [StringLength(255)]
+        public string TransactionReceipt { get; set; }
+
+        public Guid RefundWalletId { get; set; }
     }
 }

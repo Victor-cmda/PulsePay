@@ -30,11 +30,11 @@ namespace Application.Services
         }
 
         public async Task<WalletTransactionDto> CreateTransactionAsync(
-            Guid walletId,
-            decimal amount,
-            TransactionType type,
-            string description,
-            string reference = null)
+    Guid walletId,
+    decimal amount,
+    TransactionType type,
+    string description,
+    string reference = null)
         {
             var wallet = await _walletRepository.GetByIdAsync(walletId);
             if (wallet == null)
@@ -47,7 +47,31 @@ namespace Application.Services
                 throw new ValidationException("O valor da transação deve ser maior que zero");
             }
 
-            // Verifica saldo disponível para débitos
+            // Enforce wallet type restrictions
+            switch (type)
+            {
+                case TransactionType.Credit:
+                case TransactionType.Deposit:
+                case TransactionType.Refund when wallet.WalletType == WalletType.Withdrawal:
+                    // These are incoming transactions - only allowed for Deposit or General wallets
+                    if (wallet.WalletType == WalletType.Withdrawal)
+                    {
+                        throw new ValidationException($"Transações do tipo {type} não são permitidas em carteiras de Saque (Withdrawal). Use uma carteira de Depósito (Deposit) ou Geral (General).");
+                    }
+                    break;
+
+                case TransactionType.Debit:
+                case TransactionType.Withdraw:
+                case TransactionType.Refund when wallet.WalletType == WalletType.Deposit:
+                    // These are outgoing transactions - only allowed for Withdrawal or General wallets
+                    if (wallet.WalletType == WalletType.Deposit)
+                    {
+                        throw new ValidationException($"Transações do tipo {type} não são permitidas em carteiras de Depósito (Deposit). Use uma carteira de Saque (Withdrawal) ou Geral (General).");
+                    }
+                    break;
+            }
+
+            // Verify balance for outgoing transactions
             if ((type == TransactionType.Debit || type == TransactionType.Withdraw)
                 && wallet.AvailableBalance < amount)
             {
@@ -72,12 +96,13 @@ namespace Application.Services
 
                 try
                 {
-                    // Cria a transação
+                    // Create the transaction
                     var result = await _transactionRepository.CreateAsync(transaction);
 
-                    // Atualiza o saldo da carteira
-                    if (type == TransactionType.Credit || type == TransactionType.Deposit)
+                    // Update the wallet balance
+                    if (type == TransactionType.Credit || type == TransactionType.Deposit || type == TransactionType.Refund)
                     {
+                        // Incoming transactions
                         wallet.AvailableBalance += amount;
                         wallet.TotalBalance = wallet.AvailableBalance + wallet.PendingBalance;
                         transaction.Status = TransactionStatus.Completed;
@@ -86,6 +111,7 @@ namespace Application.Services
                     }
                     else if (type == TransactionType.Debit || type == TransactionType.Withdraw)
                     {
+                        // Outgoing transactions
                         wallet.AvailableBalance -= amount;
                         wallet.TotalBalance = wallet.AvailableBalance + wallet.PendingBalance;
                         transaction.Status = TransactionStatus.Completed;
@@ -96,11 +122,11 @@ namespace Application.Services
                     wallet.LastUpdateAt = DateTime.UtcNow;
                     await _walletRepository.UpdateAsync(wallet);
 
-                    // Commit da transação
+                    // Commit transaction
                     await dbTransaction.CommitAsync();
 
-                    _logger.LogInformation("Transação {TransactionId} criada: Tipo: {Type} - Valor: {Amount}",
-                        result.Id, type, amount);
+                    _logger.LogInformation("Transação {TransactionId} criada: Tipo: {Type} - Valor: {Amount} - Carteira: {WalletType}",
+                        result.Id, type, amount, wallet.WalletType);
 
                     return MapToDto(result);
                 }
@@ -134,6 +160,30 @@ namespace Application.Services
             if (wallet == null)
             {
                 throw new NotFoundException($"Carteira com ID {transaction.WalletId} não encontrada");
+            }
+
+            // Verificar se o tipo de transação é compatível com o tipo da carteira
+            switch (transaction.Type)
+            {
+                case TransactionType.Credit:
+                case TransactionType.Deposit:
+                case TransactionType.Refund when wallet.WalletType == WalletType.Withdrawal:
+                    // Transações de entrada - apenas permitidas para carteiras Deposit ou General
+                    if (wallet.WalletType == WalletType.Withdrawal)
+                    {
+                        throw new ValidationException($"Transações do tipo {transaction.Type} não são permitidas em carteiras de Saque (Withdrawal)");
+                    }
+                    break;
+
+                case TransactionType.Debit:
+                case TransactionType.Withdraw:
+                case TransactionType.Refund when wallet.WalletType == WalletType.Deposit:
+                    // Transações de saída - apenas permitidas para carteiras Withdrawal ou General
+                    if (wallet.WalletType == WalletType.Deposit)
+                    {
+                        throw new ValidationException($"Transações do tipo {transaction.Type} não são permitidas em carteiras de Depósito (Deposit)");
+                    }
+                    break;
             }
 
             // Verifica novamente o saldo para débitos no momento do processamento
@@ -173,7 +223,8 @@ namespace Application.Services
                     // Commit da transação
                     await dbTransaction.CommitAsync();
 
-                    _logger.LogInformation("Transação {TransactionId} processada", transactionId);
+                    _logger.LogInformation("Transação {TransactionId} processada na carteira {WalletType}",
+                        transactionId, wallet.WalletType);
                     return MapToDto(result);
                 }
                 catch (Exception)
@@ -202,8 +253,40 @@ namespace Application.Services
                 throw new ValidationException("Apenas transações pendentes podem ser canceladas");
             }
 
+            var wallet = await _walletRepository.GetByIdAsync(transaction.WalletId);
+            if (wallet == null)
+            {
+                throw new NotFoundException($"Carteira com ID {transaction.WalletId} não encontrada");
+            }
+
             try
             {
+                // Para transações de débito pendentes, pode ser necessário restaurar fundos reservados
+                if ((transaction.Type == TransactionType.Debit || transaction.Type == TransactionType.Withdraw) &&
+                    wallet.PendingBalance >= transaction.Amount)
+                {
+                    await using var dbTransaction = await _walletRepository.BeginTransactionAsync();
+
+                    try
+                    {
+                        // Restaura o saldo pendente para disponível se aplicável
+                        wallet.PendingBalance -= transaction.Amount;
+                        wallet.AvailableBalance += transaction.Amount;
+                        wallet.LastUpdateAt = DateTime.UtcNow;
+                        await _walletRepository.UpdateAsync(wallet);
+
+                        await dbTransaction.CommitAsync();
+
+                        _logger.LogInformation("Fundos reservados restaurados para a carteira {WalletId} após cancelamento de transação",
+                            wallet.Id);
+                    }
+                    catch (Exception)
+                    {
+                        await dbTransaction.RollbackAsync();
+                        throw;
+                    }
+                }
+
                 transaction.Status = TransactionStatus.Cancelled;
                 if (!string.IsNullOrEmpty(reason))
                 {
@@ -211,8 +294,8 @@ namespace Application.Services
                 }
 
                 var result = await _transactionRepository.UpdateAsync(transaction);
-                _logger.LogInformation("Transação {TransactionId} cancelada. Motivo: {Reason}",
-                    transactionId, reason ?? "Não informado");
+                _logger.LogInformation("Transação {TransactionId} cancelada na carteira {WalletType}. Motivo: {Reason}",
+                    transactionId, wallet.WalletType, reason ?? "Não informado");
 
                 return MapToDto(result);
             }

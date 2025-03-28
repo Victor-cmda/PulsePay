@@ -144,6 +144,11 @@ namespace Infrastructure.Data
                 entity.HasIndex(e => e.SellerId);
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.ValidationId).IsUnique();
+                entity.Property(e => e.WalletId);
+                entity.HasOne(e => e.Wallet)
+                    .WithMany()
+                    .HasForeignKey(e => e.WalletId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Notification>(entity =>
@@ -173,11 +178,13 @@ namespace Infrastructure.Data
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
                 entity.Property(e => e.Reason).HasMaxLength(100);
+                entity.Property(e => e.RefundWalletId);
+                entity.Property(e => e.TransactionReceipt).HasMaxLength(255);
 
                 entity.HasOne(e => e.Transaction)
-                    .WithMany()
-                    .HasForeignKey(e => e.TransactionId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                        .WithMany()
+                        .HasForeignKey(e => e.TransactionId)
+                        .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

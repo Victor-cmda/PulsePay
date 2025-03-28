@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Application.DTOs
 {
@@ -21,10 +16,8 @@ namespace Application.DTOs
         public bool IsValid { get; set; }
         public string PixKey { get; set; }
         public string PixKeyType { get; set; }
-        public string KeyOwnerName { get; set; }
-        public string KeyOwnerDocument { get; set; }
-        public string BankName { get; set; }
         public string ValidationId { get; set; }
         public string ErrorMessage { get; set; }
+        public DateTime ValidatedAt { get; set; } = DateTime.UtcNow;
     }
 }

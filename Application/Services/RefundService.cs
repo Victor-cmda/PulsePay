@@ -12,41 +12,70 @@ namespace Application.Services
     {
         private readonly IRefundRepository _refundRepository;
         private readonly ITransactionRepository _transactionRepository;
+        private readonly IWalletRepository _walletRepository;
         private readonly IListenerService _listenerService;
+        private readonly IWalletService _walletService;
         private readonly ILogger<RefundService> _logger;
 
         public RefundService(
             IRefundRepository refundRepository,
             ITransactionRepository transactionRepository,
             IListenerService listenerService,
+            IWalletRepository walletRepository,
+            IWalletService walletService,
             ILogger<RefundService> logger)
         {
             _refundRepository = refundRepository;
             _transactionRepository = transactionRepository;
             _listenerService = listenerService;
+            _walletRepository = walletRepository;
+            _walletService = walletService;
             _logger = logger;
         }
 
         public async Task<RefundResponseDto> RequestRefundAsync(RefundRequestDto request, Guid sellerId)
         {
-            // Verificar se a transação existe
+            // Verify if the transaction exists
             var transaction = await _transactionRepository.GetByIdAsync(request.TransactionId);
             if (transaction == null)
                 throw new NotFoundException($"Transação com ID {request.TransactionId} não encontrada");
 
-            // Verificar se a transação pertence ao vendedor
+            // Verify if the transaction belongs to the seller
             if (transaction.SellerId != sellerId)
                 throw new NotFoundException($"Transação com ID {request.TransactionId} não encontrada");
 
-            // Verificar se a transação já foi completada (só pode estornar transações completadas)
+            // Verify if the transaction is completed (can only refund completed transactions)
             if (transaction.Status != "COMPLETED" && transaction.Status != "APPROVED")
                 throw new ValidationException("Apenas transações completadas podem ser estornadas");
 
-            // Verificar se o valor do estorno não excede o valor da transação
+            // Verify if the refund amount does not exceed the transaction amount
             if (request.Amount > transaction.Amount)
                 throw new ValidationException("O valor do estorno não pode ser maior que o valor da transação");
 
-            // Criar o estorno
+            // Find the appropriate withdrawal wallet for the refund
+            var wallets = await _walletRepository.GetAllBySellerIdAsync(sellerId);
+
+            // Try to find a Withdrawal wallet first
+            var withdrawalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.Withdrawal);
+
+            // If no Withdrawal wallet exists, try to use a General wallet
+            var generalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.General);
+
+            // Determine which wallet to use for the refund
+            var refundWallet = withdrawalWallet ?? generalWallet;
+
+            if (refundWallet == null)
+            {
+                throw new ValidationException("Não foi encontrada uma carteira de Saque (Withdrawal) ou Geral (General) para processar o estorno");
+            }
+
+            // Check if the refund wallet has sufficient balance
+            if (refundWallet.AvailableBalance < request.Amount)
+            {
+                throw new InsufficientFundsException($"Saldo insuficiente na carteira de {refundWallet.WalletType} para processar o estorno");
+            }
+
+            // Create the refund
             var refund = new Refund
             {
                 Id = Guid.NewGuid(),
@@ -59,12 +88,12 @@ namespace Application.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Salvar o estorno
+            // Save the refund
             var result = await _refundRepository.CreateAsync(refund);
-            _logger.LogInformation("Estorno criado: {RefundId} para transação {TransactionId} - Valor: {Amount}",
-                result.Id, result.TransactionId, result.Amount);
+            _logger.LogInformation("Estorno criado: {RefundId} para transação {TransactionId} - Valor: {Amount} - Carteira: {WalletType}",
+                result.Id, result.TransactionId, result.Amount, refundWallet.WalletType);
 
-            // Enviar notificação de estorno criado
+            // Send refund notification
             await SendRefundNotification(result, "refund.created");
 
             return MapToDto(result);
@@ -94,12 +123,45 @@ namespace Application.Services
             if (refund.Status != RefundStatus.Pending)
                 throw new ValidationException($"Não é possível aprovar estorno que não está pendente. Status atual: {refund.Status}");
 
+            // Verificar se existe uma carteira adequada para processar o estorno
+            var wallets = await _walletRepository.GetAllBySellerIdAsync(refund.SellerId);
+
+            // Primeiro tenta encontrar uma carteira Withdrawal
+            var withdrawalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.Withdrawal);
+
+            // Se não encontrar, tenta usar uma carteira General
+            var generalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.General);
+
+            // Determina qual carteira usar para o estorno
+            var refundWallet = withdrawalWallet ?? generalWallet;
+
+            if (refundWallet == null)
+            {
+                throw new ValidationException("Não foi encontrada uma carteira de Saque (Withdrawal) ou Geral (General) para processar o estorno");
+            }
+
+            // Verificar se a carteira tem saldo suficiente
+            if (refundWallet.AvailableBalance < refund.Amount)
+            {
+                throw new InsufficientFundsException($"Saldo insuficiente na carteira de {refundWallet.WalletType} para processar o estorno");
+            }
+
+            // Deduzir o valor da carteira
+            await _walletService.DeductFundsAsync(refundWallet.Id, new WalletOperationDto
+            {
+                Amount = refund.Amount,
+                Description = $"Estorno aprovado - {refund.Reason}",
+                Reference = $"REFUND_APPROVED_{refund.Id}"
+            });
+
             // Atualizar status para Processing
             refund.Status = RefundStatus.Processing;
             refund.ProcessedAt = DateTime.UtcNow;
+            refund.RefundWalletId = refundWallet.Id; // Adicione este campo ao modelo Refund
 
             var result = await _refundRepository.UpdateAsync(refund);
-            _logger.LogInformation("Estorno {RefundId} aprovado pelo admin {AdminId}", id, adminId);
+            _logger.LogInformation("Estorno {RefundId} aprovado pelo admin {AdminId} usando carteira {WalletType}",
+                id, adminId, refundWallet.WalletType);
 
             // Enviar notificação de estorno aprovado
             await SendRefundNotification(result, "refund.processing");
@@ -143,7 +205,7 @@ namespace Application.Services
             // Atualizar status para Completed
             refund.Status = RefundStatus.Completed;
             refund.ProcessedAt = DateTime.UtcNow;
-            // Aqui poderíamos salvar o recibo da transação, se o modelo tiver esse campo
+            refund.TransactionReceipt = transactionReceipt;
 
             var result = await _refundRepository.UpdateAsync(refund);
             _logger.LogInformation("Estorno {RefundId} completado com sucesso.", id);

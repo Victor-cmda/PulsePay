@@ -54,5 +54,10 @@ namespace Domain.Models
 
         [StringLength(100)]
         public string PaymentProofId { get; set; }
+
+        public Guid WalletId { get; set; }
+
+        [ForeignKey("WalletId")]
+        public virtual Wallet Wallet { get; set; }
     }
 }

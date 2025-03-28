@@ -146,6 +146,8 @@ namespace Infrastructure.DI
             services.AddScoped<IListenerService, ListenerService>();
             services.AddScoped<IRefundService, RefundService>();
 
+            services.AddSingleton<IPixValidationCacheService, PixValidationCacheService>();
+
             return services;
         }
 

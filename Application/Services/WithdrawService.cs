@@ -12,42 +12,76 @@ namespace Application.Services
     {
         private readonly IWithdrawRepository _withdrawRepository;
         private readonly IWalletService _walletService;
+        private readonly IWalletRepository _walletRepository;
         private readonly IBankAccountService _bankAccountService;
         private readonly ILogger<WithdrawService> _logger;
 
         public WithdrawService(
             IWithdrawRepository withdrawRepository,
             IWalletService walletService,
+            IWalletRepository walletRepository,
             IBankAccountService bankAccountService,
             ILogger<WithdrawService> logger)
         {
             _withdrawRepository = withdrawRepository;
             _walletService = walletService;
+            _walletRepository = walletRepository;
             _bankAccountService = bankAccountService;
             _logger = logger;
         }
 
         public async Task<WithdrawDto> RequestWithdrawAsync(WithdrawRequestDto request)
         {
-            // Verificar se a conta bancária existe e está verificada
+            // Verify if the bank account exists and is verified
             var bankAccount = await _bankAccountService.GetBankAccountAsync(request.BankAccountId);
             if (!bankAccount.IsVerified)
                 throw new ValidationException("A conta bancária selecionada não está verificada");
 
-            // Verificar se o saldo é suficiente
-            var hasBalance = await _walletService.HasSufficientFundsAsync(request.WalletId, request.Amount);
+            // Find the appropriate withdrawal wallet
+            var wallets = await _walletRepository.GetAllBySellerIdAsync(request.SellerId);
+
+            // First try to find a Withdrawal wallet
+            var withdrawalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.Withdrawal);
+
+            // If no Withdrawal wallet exists, try to use a General wallet
+            var generalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.General);
+
+            // Use the specified wallet ID if it's a Withdrawal or General wallet
+            var requestedWallet = await _walletRepository.GetByIdAsync(request.WalletId);
+            if (requestedWallet != null &&
+                (requestedWallet.WalletType == WalletType.Withdrawal || requestedWallet.WalletType == WalletType.General))
+            {
+                // Use the requested wallet if it's of appropriate type
+                withdrawalWallet = requestedWallet;
+            }
+            else if (requestedWallet != null && requestedWallet.WalletType == WalletType.Deposit)
+            {
+                // Cannot withdraw from a Deposit wallet
+                throw new ValidationException("Não é possível realizar saques a partir de uma carteira do tipo Depósito (Deposit). Use uma carteira de Saque (Withdrawal) ou Geral (General).");
+            }
+
+            // Determine which wallet to use for the withdrawal
+            var sourceWallet = withdrawalWallet ?? generalWallet;
+
+            if (sourceWallet == null)
+            {
+                throw new ValidationException("Não foi encontrada uma carteira de Saque (Withdrawal) ou Geral (General) para processar o saque");
+            }
+
+            // Check if the balance is sufficient
+            var hasBalance = await _walletService.HasSufficientFundsAsync(sourceWallet.Id, request.Amount);
             if (!hasBalance)
                 throw new InsufficientFundsException("Saldo insuficiente para realizar este saque");
 
-            // Deduzir o valor da carteira (ou colocar em pending, dependendo da sua lógica)
-            await _walletService.DeductFundsAsync(request.WalletId, new WalletOperationDto
+            // Deduct the amount from the wallet
+            await _walletService.DeductFundsAsync(sourceWallet.Id, new WalletOperationDto
             {
                 Amount = request.Amount,
                 Description = "Solicitação de saque - Aguardando aprovação",
                 Reference = $"WITHDRAW_REQUEST_{Guid.NewGuid()}"
             });
 
-            // Criar a solicitação de saque
+            // Create the withdrawal request
             var withdraw = new Withdraw
             {
                 Id = Guid.NewGuid(),
@@ -57,11 +91,12 @@ namespace Application.Services
                 WithdrawMethod = request.Method, // PIX, TED, etc.
                 RequestedAt = DateTime.UtcNow,
                 BankAccountId = request.BankAccountId,
+                WalletId = sourceWallet.Id  // Store which wallet was used
             };
 
             var result = await _withdrawRepository.CreateAsync(withdraw);
-            _logger.LogInformation("Solicitação de saque criada: {WithdrawId} para vendedor {SellerId} - Valor: {Amount}",
-                result.Id, result.SellerId, result.Amount);
+            _logger.LogInformation("Solicitação de saque criada: {WithdrawId} para vendedor {SellerId} - Valor: {Amount} - Carteira: {WalletType}",
+                result.Id, result.SellerId, result.Amount, sourceWallet.WalletType);
 
             return MapToDto(result);
         }

@@ -16,7 +16,6 @@ namespace Application.Services
 
         public Task<PixKeyValidationDto> ValidatePixKeyAsync(string pixKey, string pixKeyType)
         {
-            // Realizando validação básica de formato da chave PIX
             var isValid = false;
             var errorMessage = string.Empty;
 
@@ -58,17 +57,18 @@ namespace Application.Services
                 "Validação de chave PIX: {PixKey}, Tipo: {PixKeyType}, Resultado: {IsValid}",
                 pixKey, pixKeyType, isValid);
 
-            // Retorna resultado da validação com validationId
+            string validationId = isValid ?
+                GenerateValidationId(pixKey, pixKeyType) :
+                null;
+
             var result = new PixKeyValidationDto
             {
                 IsValid = isValid,
                 PixKey = pixKey,
                 PixKeyType = pixKeyType,
-                KeyOwnerName = isValid ? "Nome não verificado (validação interna)" : null,
-                KeyOwnerDocument = isValid ? "Documento não verificado (validação interna)" : null,
-                BankName = isValid ? "Banco não verificado (validação interna)" : null,
-                ValidationId = isValid ? Guid.NewGuid().ToString() : null,
-                ErrorMessage = isValid ? null : errorMessage
+                ValidationId = validationId,
+                ErrorMessage = isValid ? null : errorMessage,
+                ValidatedAt = DateTime.UtcNow
             };
 
             return Task.FromResult(result);
@@ -76,14 +76,10 @@ namespace Application.Services
 
         public Task<PixPaymentConfirmationDto> ConfirmPixPaymentAsync(string validationId, decimal value)
         {
-            // Em uma aplicação real, aqui você se comunicaria com a API do banco
-            // para efetuar o pagamento PIX usando o validationId
-
             _logger.LogInformation(
                 "Confirmando pagamento PIX: ValidaçãoID: {ValidationId}, Valor: {Value}",
                 validationId, value);
 
-            // Gera um ID de pagamento para referência
             string paymentId = Guid.NewGuid().ToString();
 
             var result = new PixPaymentConfirmationDto
@@ -101,14 +97,11 @@ namespace Application.Services
 
         private bool ValidateCpf(string cpf)
         {
-            // Remove caracteres não numéricos
             cpf = Regex.Replace(cpf, @"[^\d]", "");
 
-            // Verifica se tem 11 dígitos
             if (cpf.Length != 11)
                 return false;
 
-            // Verifica se todos os dígitos são iguais
             bool allEqual = true;
             for (int i = 1; i < cpf.Length; i++)
             {
@@ -121,20 +114,16 @@ namespace Application.Services
             if (allEqual)
                 return false;
 
-            // Uma validação simplificada - em produção você deve implementar a validação completa
             return true;
         }
 
         private bool ValidateCnpj(string cnpj)
         {
-            // Remove caracteres não numéricos
             cnpj = Regex.Replace(cnpj, @"[^\d]", "");
 
-            // Verifica se tem 14 dígitos
             if (cnpj.Length != 14)
                 return false;
 
-            // Verifica se todos os dígitos são iguais
             bool allEqual = true;
             for (int i = 1; i < cnpj.Length; i++)
             {
@@ -147,29 +136,44 @@ namespace Application.Services
             if (allEqual)
                 return false;
 
-            // Uma validação simplificada - em produção você deve implementar a validação completa
             return true;
         }
 
         private bool ValidateEmail(string email)
         {
-            // Regex para validação básica de email
             var emailPattern = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
             return Regex.IsMatch(email, emailPattern);
         }
 
         private bool ValidatePhone(string phone)
         {
-            // Valida telefone no formato +5511999999999
             var phonePattern = @"^\+55\d{10,11}$";
             return Regex.IsMatch(phone, phonePattern);
         }
 
         private bool ValidateRandomKey(string key)
         {
-            // Chaves aleatórias do PIX possuem 32 caracteres alfanuméricos
             var randomKeyPattern = @"^[a-zA-Z0-9]{32}$";
             return Regex.IsMatch(key, randomKeyPattern);
+        }
+
+        private string GenerateValidationId(string pixKey, string pixKeyType)
+        {
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var input = $"{pixKey}:{pixKeyType}:{timestamp}";
+
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            {
+                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
+                byte[] hashBytes = md5.ComputeHash(inputBytes);
+
+                var sb = new System.Text.StringBuilder();
+                for (int i = 0; i < hashBytes.Length; i++)
+                {
+                    sb.Append(hashBytes[i].ToString("X2"));
+                }
+                return sb.ToString();
+            }
         }
 
         #endregion

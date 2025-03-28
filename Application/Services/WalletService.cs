@@ -206,11 +206,11 @@ namespace Application.Services
             if (wallet == null)
                 throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
 
-            // Verificar se o tipo de operação é válido para o tipo da carteira
+            // Verify wallet type restriction - only Deposit or General wallets can receive funds
             if (wallet.WalletType == WalletType.Withdrawal)
-                throw new ValidationException("Não é possível adicionar fundos diretamente a uma carteira do tipo Saque");
+                throw new ValidationException("Não é possível adicionar fundos a uma carteira do tipo Saque (Withdrawal). Use a carteira de Depósito (Deposit) ou Geral (General).");
 
-            // Criar a transação
+            // Create the transaction
             var transaction = new WalletTransaction
             {
                 Id = Guid.NewGuid(),
@@ -224,12 +224,12 @@ namespace Application.Services
                 ProcessedAt = DateTime.UtcNow
             };
 
-            // Atualizar o saldo da carteira
+            // Update wallet balance
             wallet.AvailableBalance += operationDto.Amount;
             wallet.TotalBalance = wallet.AvailableBalance + wallet.PendingBalance;
             wallet.LastUpdateAt = DateTime.UtcNow;
 
-            // Salvar as alterações em transação
+            // Save changes in transaction
             await using var dbTransaction = await _walletRepository.BeginTransactionAsync();
             try
             {
@@ -238,7 +238,8 @@ namespace Application.Services
 
                 await dbTransaction.CommitAsync();
 
-                _logger.LogInformation("Adicionado {Amount} à carteira {WalletId}", operationDto.Amount, wallet.Id);
+                _logger.LogInformation("Adicionado {Amount} à carteira {WalletId} do tipo {WalletType}",
+                                      operationDto.Amount, wallet.Id, wallet.WalletType);
                 return MapToDto(updated);
             }
             catch (Exception ex)
@@ -258,14 +259,14 @@ namespace Application.Services
             if (wallet == null)
                 throw new NotFoundException($"Carteira com ID {walletId} não encontrada");
 
-            // Verificar se o tipo de operação é válido para o tipo da carteira
+            // Verify wallet type restriction - only Withdrawal or General wallets can send funds
             if (wallet.WalletType == WalletType.Deposit)
-                throw new ValidationException("Não é possível deduzir fundos diretamente de uma carteira do tipo Depósito");
+                throw new ValidationException("Não é possível deduzir fundos de uma carteira do tipo Depósito (Deposit). Use a carteira de Saque (Withdrawal) ou Geral (General).");
 
             if (wallet.AvailableBalance < operationDto.Amount)
                 throw new InsufficientFundsException("Saldo insuficiente para esta operação");
 
-            // Criar a transação
+            // Create the transaction
             var transaction = new WalletTransaction
             {
                 Id = Guid.NewGuid(),
@@ -279,12 +280,12 @@ namespace Application.Services
                 ProcessedAt = DateTime.UtcNow
             };
 
-            // Atualizar o saldo da carteira
+            // Update wallet balance
             wallet.AvailableBalance -= operationDto.Amount;
             wallet.TotalBalance = wallet.AvailableBalance + wallet.PendingBalance;
             wallet.LastUpdateAt = DateTime.UtcNow;
 
-            // Salvar as alterações em transação
+            // Save changes in transaction
             await using var dbTransaction = await _walletRepository.BeginTransactionAsync();
             try
             {
@@ -293,7 +294,8 @@ namespace Application.Services
 
                 await dbTransaction.CommitAsync();
 
-                _logger.LogInformation("Deduzido {Amount} da carteira {WalletId}", operationDto.Amount, wallet.Id);
+                _logger.LogInformation("Deduzido {Amount} da carteira {WalletId} do tipo {WalletType}",
+                                      operationDto.Amount, wallet.Id, wallet.WalletType);
                 return MapToDto(updated);
             }
             catch (Exception ex)
@@ -337,10 +339,10 @@ namespace Application.Services
 
         // Método auxiliar para transferir saldo entre carteiras (mesmo vendedor)
         public async Task<(WalletDto sourceWallet, WalletDto destinationWallet)> TransferBetweenWalletsAsync(
-            Guid sourceWalletId,
-            Guid destinationWalletId,
-            decimal amount,
-            string description = null)
+    Guid sourceWalletId,
+    Guid destinationWalletId,
+    decimal amount,
+    string description = null)
         {
             if (amount <= 0)
                 throw new ValidationException("O valor da transferência deve ser maior que zero");
@@ -356,50 +358,56 @@ namespace Application.Services
             if (destinationWallet == null)
                 throw new NotFoundException($"Carteira de destino com ID {destinationWalletId} não encontrada");
 
-            // Verificar se as carteiras pertencem ao mesmo vendedor
+            // Check if the wallets belong to the same seller
             if (sourceWallet.SellerId != destinationWallet.SellerId)
                 throw new ValidationException("Transferências só são permitidas entre carteiras do mesmo vendedor");
 
-            // Verificar se o tipo de transferência é válido
+            // Verify if transfer direction is valid based on wallet types
             bool isValidTransfer = false;
 
+            // Specific transfer validation rules
             if (sourceWallet.WalletType == WalletType.General && destinationWallet.WalletType == WalletType.General)
             {
-                // Transferência entre carteiras General (improvável, mas possível)
+                // Transfer between General wallets (unlikely, but possible)
                 isValidTransfer = true;
             }
             else if (sourceWallet.WalletType == WalletType.General)
             {
-                // De General para qualquer outra
+                // From General to any other
                 isValidTransfer = true;
             }
             else if (destinationWallet.WalletType == WalletType.General)
             {
-                // De qualquer uma para General
+                // From any other to General
                 isValidTransfer = true;
             }
             else if (sourceWallet.WalletType == WalletType.Deposit && destinationWallet.WalletType == WalletType.Withdrawal)
             {
-                // De Depósito para Saque (fluxo principal)
+                // From Deposit to Withdrawal (main flow)
                 isValidTransfer = true;
+            }
+            // New rule: Never allow transfers from Withdrawal to Deposit
+            else if (sourceWallet.WalletType == WalletType.Withdrawal && destinationWallet.WalletType == WalletType.Deposit)
+            {
+                isValidTransfer = false;
             }
 
             if (!isValidTransfer)
             {
-                throw new ValidationException($"Transferência de {sourceWallet.WalletType} para {destinationWallet.WalletType} não permitida");
+                throw new ValidationException($"Transferência de {sourceWallet.WalletType} para {destinationWallet.WalletType} não permitida. " +
+                                               "Fluxos permitidos: Depósito → Saque, Geral → qualquer, qualquer → Geral");
             }
 
-            // Verificar saldo
+            // Check balance
             if (sourceWallet.AvailableBalance < amount)
                 throw new InsufficientFundsException("Saldo insuficiente na carteira de origem");
 
-
-            // Começar transação
+            // Start transaction
             await using var transaction = await _walletRepository.BeginTransactionAsync();
 
             try
             {
-                // Criar transação de saída
+                // Create outgoing transaction
                 var outTransaction = new WalletTransaction
                 {
                     Id = Guid.NewGuid(),
@@ -413,7 +421,7 @@ namespace Application.Services
                     ProcessedAt = DateTime.UtcNow
                 };
 
-                // Criar transação de entrada
+                // Create incoming transaction
                 var inTransaction = new WalletTransaction
                 {
                     Id = Guid.NewGuid(),
@@ -427,7 +435,7 @@ namespace Application.Services
                     ProcessedAt = DateTime.UtcNow
                 };
 
-                // Atualizar saldos
+                // Update balances
                 sourceWallet.AvailableBalance -= amount;
                 sourceWallet.TotalBalance = sourceWallet.AvailableBalance + sourceWallet.PendingBalance;
                 sourceWallet.LastUpdateAt = DateTime.UtcNow;
@@ -436,19 +444,19 @@ namespace Application.Services
                 destinationWallet.TotalBalance = destinationWallet.AvailableBalance + destinationWallet.PendingBalance;
                 destinationWallet.LastUpdateAt = DateTime.UtcNow;
 
-                // Salvar transações
+                // Save transactions
                 await _transactionRepository.CreateAsync(outTransaction);
                 await _transactionRepository.CreateAsync(inTransaction);
 
-                // Atualizar carteiras
+                // Update wallets
                 var updatedSourceWallet = await _walletRepository.UpdateAsync(sourceWallet);
                 var updatedDestinationWallet = await _walletRepository.UpdateAsync(destinationWallet);
 
                 await transaction.CommitAsync();
 
                 _logger.LogInformation(
-                    "Transferência de {Amount} da carteira {SourceWalletId} para a carteira {DestinationWalletId}",
-                    amount, sourceWalletId, destinationWalletId);
+                    "Transferência de {Amount} da carteira {SourceWalletType} para a carteira {DestinationWalletType}",
+                    amount, sourceWallet.WalletType, destinationWallet.WalletType);
 
                 return (MapToDto(updatedSourceWallet), MapToDto(updatedDestinationWallet));
             }
