@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class first : Migration
+    public partial class teste : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -139,6 +139,32 @@ namespace Infrastructure.Migrations
                         principalTable: "Transactions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Refunds",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SellerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TransactionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Reason = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    ExternalReference = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FailReason = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Refunds", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Refunds_Transactions_TransactionId",
+                        column: x => x.TransactionId,
+                        principalTable: "Transactions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -281,6 +307,11 @@ namespace Infrastructure.Migrations
                 column: "TransactionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Refunds_TransactionId",
+                table: "Refunds",
+                column: "TransactionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Wallets_SellerId_WalletType",
                 table: "Wallets",
                 columns: new[] { "SellerId", "WalletType" });
@@ -312,6 +343,9 @@ namespace Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "Refunds");
 
             migrationBuilder.DropTable(
                 name: "WalletTransactions");

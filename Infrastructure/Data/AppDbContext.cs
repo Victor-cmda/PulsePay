@@ -15,6 +15,7 @@ namespace Infrastructure.Data
         public DbSet<Deposit> Deposits { get; set; }
         public DbSet<CustomerPayout> CustomerPayouts { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Refund> Refunds { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -163,6 +164,20 @@ namespace Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.TransactionId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Refund>(entity =>
+            {
+                entity.ToTable("Refunds");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+                entity.Property(e => e.Reason).HasMaxLength(100);
+
+                entity.HasOne(e => e.Transaction)
+                    .WithMany()
+                    .HasForeignKey(e => e.TransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

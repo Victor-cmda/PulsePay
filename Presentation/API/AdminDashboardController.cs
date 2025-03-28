@@ -20,18 +20,21 @@ namespace Presentation.API
         private readonly ICustomerPayoutService _customerPayoutService;
         private readonly IBankAccountService _bankAccountService;
         private readonly ILogger<AdminDashboardController> _logger;
+        private readonly IRefundService _refundService;
 
         public AdminDashboardController(
             IWalletService walletService,
             IWalletTransactionService transactionService,
             ICustomerPayoutService customerPayoutService,
             IBankAccountService bankAccountService,
+            IRefundService refundService,
             ILogger<AdminDashboardController> logger)
         {
             _walletService = walletService;
             _transactionService = transactionService;
             _customerPayoutService = customerPayoutService;
             _bankAccountService = bankAccountService;
+            _refundService = refundService;
             _logger = logger;
         }
 
@@ -283,6 +286,23 @@ namespace Presentation.API
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao obter pagamentos pendentes");
+                return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError,
+                    "Ocorreu um erro interno ao processar sua solicitação."));
+            }
+        }
+
+        [HttpGet("refunds/pending")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<RefundResponseDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPendingRefunds([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var refunds = await _refundService.GetPendingRefundsAsync(page, pageSize);
+                return Ok(new ApiResponse<IEnumerable<RefundResponseDto>>(refunds));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter estornos pendentes");
                 return StatusCode(500, new ApiResponse<object>(HttpStatusCode.InternalServerError,
                     "Ocorreu um erro interno ao processar sua solicitação."));
             }

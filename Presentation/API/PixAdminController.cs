@@ -4,11 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.API.Common.Responses;
 using Shared.Exceptions;
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Presentation.API
 {
