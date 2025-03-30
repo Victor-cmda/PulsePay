@@ -120,7 +120,7 @@ namespace Infrastructure.Adapters.PaymentGateway
 
             var transaction = new Transaction
             {
-                Id = result.Id,
+                Id = result.PaymentId,
                 OrderId = paymentRequest.OrderId,
                 Amount = paymentRequest.Amount,
                 PaymentType = "PIX",

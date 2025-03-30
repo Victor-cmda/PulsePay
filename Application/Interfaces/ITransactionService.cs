@@ -1,4 +1,5 @@
-﻿using Domain.Models;
+﻿using Application.DTOs;
+using Domain.Models;
 
 namespace Application.Interfaces
 {
@@ -7,5 +8,7 @@ namespace Application.Interfaces
         Task<Transaction> CreateTransactionAsync(Transaction transaction);
         Task<Transaction> UpdateTransactionAsync(Transaction transaction);
         Task<Transaction> GetTransactionByIdAsync(Guid id);
+        Task SendTransactionNotificationAsync(Guid id, string status);
+        Task<Transaction> UpdateTransactionStatusAsync(Guid id, string status);
     }
 }

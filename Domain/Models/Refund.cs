@@ -27,7 +27,7 @@ namespace Domain.Models
 
         [Required]
         [StringLength(100)]
-        public string Reason { get; set; }
+        public string Reason { get; set; } = "";
 
         [StringLength(50)]
         public string ExternalReference { get; set; }
@@ -38,10 +38,10 @@ namespace Domain.Models
         public DateTime? ProcessedAt { get; set; }
 
         [StringLength(255)]
-        public string FailReason { get; set; }
+        public string FailReason { get; set; } = "";
 
         [StringLength(255)]
-        public string TransactionReceipt { get; set; }
+        public string TransactionReceipt { get; set; } = "";
 
         public Guid RefundWalletId { get; set; }
     }

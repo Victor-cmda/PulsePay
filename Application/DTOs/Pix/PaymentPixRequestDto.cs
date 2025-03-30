@@ -9,5 +9,6 @@
         public string Email { get; set; }
         public string Document { get; set; }
         public string DocumentType { get; set; }
+        public bool requires_same_owner { get; set; } = false;
     }
 }

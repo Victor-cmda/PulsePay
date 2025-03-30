@@ -66,17 +66,15 @@ namespace Application.Services
             await _notificationRepository.AddAsync(notificationEntity);
 
             transaction.Status = notification.Status;
-            transaction.PaidAt = DateTime.UtcNow;
+
+            if (IsCompletedStatus(notification.Status))
+            {
+                transaction.PaidAt = DateTime.UtcNow;
+            }
+
             await _transactionRepository.UpdateAsync(transaction);
 
-            string StatusNotification = notification.Status switch
-            {
-                "PENDING" => "PENDING",
-                "APPROVED" => "PAID",
-                "ERROR" => "ERROR",
-                "RECEIVED" => "RECEIVED",
-                _ => "ERROR"
-            };
+            string clientNotificationStatus = MapStatusToClientStatus(notification.Status, notification.PaymentType);
 
             var notificationPayload = new NotificationClientDto
             {
@@ -84,9 +82,10 @@ namespace Application.Services
                 PaymentId = transaction.PaymentId,
                 OrderId = transaction.OrderId,
                 TransactionId = transaction.TransactionId,
-                Status = StatusNotification,
+                Status = clientNotificationStatus,
                 Amount = transaction.Amount,
-                PaidAt = transaction.PaidAt
+                PaidAt = transaction.PaidAt,
+                Type = notification.PaymentType?.ToLower() ?? "payment"
             };
 
             var jsonContent = new StringContent(JsonConvert.SerializeObject(notificationPayload), Encoding.UTF8, "application/json");
@@ -106,6 +105,77 @@ namespace Application.Services
             catch (HttpRequestException ex)
             {
                 throw new Exception("Network error while sending notification to client.", ex);
+            }
+        }
+
+        private bool IsCompletedStatus(string status)
+        {
+            return status.Equals("APPROVED", StringComparison.OrdinalIgnoreCase) ||
+                   status.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase) ||
+                   status.Equals("PAID", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string MapStatusToClientStatus(string status, string paymentType)
+        {
+            string type = (paymentType ?? "PAYMENT").ToUpper();
+
+            switch (type)
+            {
+                case "PAYMENT":
+                    return status.ToUpper() switch
+                    {
+                        "PENDING" => "PENDING",
+                        "APPROVED" => "PAID",
+                        "COMPLETED" => "PAID",
+                        "RECEIVED" => "RECEIVED",
+                        "CREATED" => "CREATED",
+                        "FAILED" => "FAILED",
+                        "CANCELLED" => "CANCELLED",
+                        _ => "UNKNOWN"
+                    };
+
+                case "PAYOUT":
+                    return status.ToUpper() switch
+                    {
+                        "PENDING" => "PENDING",
+                        "APPROVED" => "PROCESSING",
+                        "COMPLETED" => "COMPLETED",
+                        "REJECTED" => "REJECTED",
+                        "FAILED" => "FAILED",
+                        _ => "UNKNOWN"
+                    };
+
+                case "REFUND":
+                    return status.ToUpper() switch
+                    {
+                        "PENDING" => "PENDING",
+                        "PROCESSING" => "PROCESSING",
+                        "COMPLETED" => "COMPLETED",
+                        "FAILED" => "FAILED",
+                        _ => "UNKNOWN"
+                    };
+
+                case "WITHDRAW":
+                    return status.ToUpper() switch
+                    {
+                        "PENDING" => "PENDING",
+                        "APPROVED" => "APPROVED",
+                        "PROCESSING" => "PROCESSING",
+                        "COMPLETED" => "COMPLETED",
+                        "FAILED" => "FAILED",
+                        "REJECTED" => "REJECTED",
+                        _ => "UNKNOWN"
+                    };
+
+                default:
+                    return status.ToUpper() switch
+                    {
+                        "PENDING" => "PENDING",
+                        "APPROVED" => "PAID",
+                        "COMPLETED" => "COMPLETED",
+                        "FAILED" => "FAILED",
+                        _ => "UNKNOWN"
+                    };
             }
         }
     }

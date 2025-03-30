@@ -10,7 +10,7 @@ using System.Net;
 namespace Presentation.API
 {
     [ApiController]
-    [Route("api/refund")]
+    [Route("pix/refund")]
     public class RefundController : ControllerBase
     {
         private readonly IRefundService _refundService;
@@ -37,11 +37,11 @@ namespace Presentation.API
                     return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest, "Invalid or missing SellerId in header."));
                 }
 
-                _logger.LogInformation("Solicitação de estorno recebida para transação {TransactionId}", request.TransactionId);
+                _logger.LogInformation("Solicitação de estorno recebida para transação {TransactionId}", request.Transaction_id);
 
                 var refund = await _refundService.RequestRefundAsync(request, sellerId);
 
-                return CreatedAtAction(nameof(GetRefundStatus), new { id = refund.Id },
+                return CreatedAtAction(nameof(GetRefundStatus), new { id = refund.refund_id },
                     new ApiResponse<RefundResponseDto>(refund));
             }
             catch (ValidationException ex)

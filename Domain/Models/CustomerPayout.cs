@@ -36,7 +36,7 @@ namespace Domain.Models
         public string Description { get; set; }
 
         [StringLength(500)]
-        public string RejectionReason { get; set; }
+        public string RejectionReason { get; set; } = "";
 
         [Required]
         [StringLength(100)]
@@ -45,15 +45,15 @@ namespace Domain.Models
         public DateTime? ValidatedAt { get; set; }
 
         [StringLength(50)]
-        public string ConfirmedByAdminId { get; set; }
+        public string ConfirmedByAdminId { get; set; } = "";
 
         public DateTime? ConfirmedAt { get; set; }
 
         [StringLength(100)]
-        public string PaymentId { get; set; }
+        public string PaymentId { get; set; } = "";
 
         [StringLength(100)]
-        public string PaymentProofId { get; set; }
+        public string PaymentProofId { get; set; } = "";
 
         public Guid WalletId { get; set; }
 

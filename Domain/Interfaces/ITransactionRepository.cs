@@ -8,5 +8,6 @@ namespace Domain.Interfaces
         Task<Transaction> UpdateAsync(Transaction transaction);
         Task<Transaction> GetByIdAsync(Guid Id);
         Task<Transaction> GetByPaymentIdAsync(string paymentId);
+        Task<Transaction> GetByDocumentCustomer(string document);
     }
 }

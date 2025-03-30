@@ -33,31 +33,18 @@ namespace Application.Services
 
         public async Task<DepositDto> CreateDepositRequestAsync(DepositRequestDto request)
         {
-            if (string.IsNullOrEmpty(request.SellerName) ||
-                string.IsNullOrEmpty(request.SellerEmail) ||
-                string.IsNullOrEmpty(request.SellerDocument) ||
-                string.IsNullOrEmpty(request.SellerDocumentType))
-            {
-                throw new ValidationException("Informações do vendedor são obrigatórias: Nome, Email, Documento e Tipo de Documento");
-            }
-
-            // Encontrar a carteira correta para o depósito (deve ser Deposit ou General)
             var wallets = await _walletRepository.GetAllBySellerIdAsync(request.SellerId);
 
-            // Primeiro tenta encontrar uma carteira Deposit
             var depositWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.Deposit);
-
-            // Se não encontrar, tenta usar uma carteira General
             var generalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.General);
 
-            // Se uma carteira específica foi solicitada, verifica se ela é adequada
             Wallet specificWallet = null;
             if (request.WalletId != Guid.Empty)
             {
                 specificWallet = await _walletRepository.GetByIdAsync(request.WalletId);
                 if (specificWallet != null && specificWallet.SellerId != request.SellerId)
                 {
-                    specificWallet = null; // A carteira não pertence a este vendedor
+                    specificWallet = null;
                 }
                 else if (specificWallet != null && specificWallet.WalletType == WalletType.Withdrawal)
                 {
@@ -65,7 +52,6 @@ namespace Application.Services
                 }
             }
 
-            // Determina qual carteira usar para o depósito
             var targetWallet = specificWallet ?? depositWallet ?? generalWallet;
 
             if (targetWallet == null)
@@ -78,10 +64,10 @@ namespace Application.Services
                 Amount = request.Amount,
                 OrderId = Guid.NewGuid().ToString(),
                 CustomerId = request.SellerId.ToString(),
-                Name = request.SellerName,
-                Email = request.SellerEmail,
-                Document = request.SellerDocument,
-                DocumentType = request.SellerDocumentType
+                Name = $"PULSEPAY",
+                Email = "admin@pulseauth.com",
+                Document = "00000000000",
+                DocumentType = "CPF"
             };
 
             var pixResponse = await _paymentService.GeneratePixPayment(pixRequest, request.SellerId);
@@ -97,6 +83,10 @@ namespace Application.Services
                 ExpiresAt = DateTime.UtcNow.AddHours(24),
                 TransactionId = pixResponse.TransactionId,
                 QrCode = pixResponse.QrCode,
+                Notes = $"CustomerId {pixRequest.CustomerId}",
+                ExternalReference = pixResponse.OrderId,
+                PaymentProvider = "GetNet",
+                ReceiptId = $"OrderId {pixRequest.OrderId}",
                 PaymentMethod = "PIX"
             };
 
@@ -122,15 +112,12 @@ namespace Application.Services
             return deposits.Select(MapToDto);
         }
 
-        // Em Application/Services/DepositService.cs (continuação)
-
         public async Task<DepositDto> ProcessDepositCallbackAsync(string transactionId, string status, decimal amount)
         {
             var deposit = await _depositRepository.GetByTransactionIdAsync(transactionId);
             if (deposit == null)
                 throw new NotFoundException($"Depósito com ID de transação {transactionId} não encontrado");
 
-            // Check if the deposit has already been processed
             if (deposit.Status != DepositStatus.Pending)
             {
                 _logger.LogWarning("Tentativa de processar depósito {DepositId} com status {Status}",
@@ -138,7 +125,6 @@ namespace Application.Services
                 return MapToDto(deposit);
             }
 
-            // Check if the amount matches
             if (deposit.Amount != amount)
             {
                 _logger.LogWarning("Valor do depósito {DepositId} não corresponde. Esperado: {Expected}, Recebido: {Received}",
@@ -147,25 +133,19 @@ namespace Application.Services
                 throw new ValidationException($"Valor do pagamento não corresponde ao valor do depósito");
             }
 
-            // Process the payment status
             if (status.ToLower() == "approved" || status.ToLower() == "completed")
             {
-                // Update the deposit
                 deposit.Status = DepositStatus.Completed;
                 deposit.ProcessedAt = DateTime.UtcNow;
 
                 await _depositRepository.UpdateAsync(deposit);
 
-                // Find the correct wallet to add funds to
                 var wallets = await _walletRepository.GetAllBySellerIdAsync(deposit.SellerId);
 
-                // First try to find a Deposit wallet
                 var depositWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.Deposit);
 
-                // If no Deposit wallet exists, try to use a General wallet
                 var generalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.General);
 
-                // Determine which wallet to use for the deposit
                 var targetWallet = depositWallet ?? generalWallet ?? deposit.Wallet;
 
                 if (targetWallet == null)
@@ -174,7 +154,6 @@ namespace Application.Services
                     throw new NotFoundException($"Carteira de depósito não encontrada para o vendedor {deposit.SellerId}");
                 }
 
-                // Add funds to the wallet
                 await _walletService.AddFundsAsync(targetWallet.Id, new WalletOperationDto
                 {
                     Amount = deposit.Amount,
@@ -187,7 +166,6 @@ namespace Application.Services
             }
             else if (status.ToLower() == "failed" || status.ToLower() == "cancelled")
             {
-                // Update the deposit as failed
                 deposit.Status = DepositStatus.Failed;
                 deposit.ProcessedAt = DateTime.UtcNow;
 
@@ -198,7 +176,6 @@ namespace Application.Services
             }
             else
             {
-                // Unknown status
                 _logger.LogWarning("Status desconhecido para depósito {DepositId}: {Status}",
                     deposit.Id, status);
             }

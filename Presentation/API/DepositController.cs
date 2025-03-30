@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Presentation.API.Common.Responses;
 using Shared.Exceptions;
-using System.ComponentModel.DataAnnotations;
 using System.Net;
 using ValidationException = Shared.Exceptions.ValidationException;
 
@@ -33,15 +32,7 @@ namespace Presentation.API
         {
             try
             {
-                if (string.IsNullOrEmpty(request.SellerName) ||
-                    string.IsNullOrEmpty(request.SellerEmail) ||
-                    string.IsNullOrEmpty(request.SellerDocument) ||
-                    string.IsNullOrEmpty(request.SellerDocumentType))
-                {
-                    return BadRequest(new ApiResponse<object>(HttpStatusCode.BadRequest,
-                        "Informações do vendedor são obrigatórias: Nome, Email, Documento e Tipo de Documento"));
-                }
-
+                request.Amount = request.Amount * 100;
                 var deposit = await _depositService.CreateDepositRequestAsync(request);
                 return CreatedAtAction(nameof(GetDeposit), new { id = deposit.Id },
                     new ApiResponse<DepositDto>(deposit));
@@ -101,9 +92,8 @@ namespace Presentation.API
             }
         }
 
-        // Webhook para processamento de callbacks de pagamento
         [HttpPost("callback")]
-        [AllowAnonymous] // Este endpoint precisa ser público para receber callbacks
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> ProcessCallback([FromBody] PaymentCallbackDto callback)
         {
@@ -121,19 +111,17 @@ namespace Presentation.API
             }
             catch (NotFoundException)
             {
-                // Não retornamos erro quando a transação não é encontrada
-                // Isso pode ser um callback duplicado ou para outro serviço
                 return Ok();
             }
             catch (ValidationException ex)
             {
                 _logger.LogWarning(ex, "Validação falhou para callback: {TransactionId}", callback.TransactionId);
-                return Ok(); // Sempre retorne 200 OK para callbacks, mesmo com erro
+                return Ok();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao processar callback: {TransactionId}", callback.TransactionId);
-                return Ok(); // Sempre retorne 200 OK para callbacks, mesmo com erro
+                return Ok();
             }
         }
     }

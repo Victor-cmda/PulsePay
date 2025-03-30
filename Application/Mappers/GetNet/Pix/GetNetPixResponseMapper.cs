@@ -9,7 +9,7 @@ namespace Application.Mappers.GetNet.Pix
         {
             return new PaymentPixResponseDto
             {
-                Id = Guid.NewGuid(),
+                PaymentId = Guid.NewGuid(),
                 Status = response.status,
                 Description = response.description,
                 TransactionId = response.additional_data.transaction_id,

@@ -1,5 +1,6 @@
 ﻿using Application.DTOs;
 using Application.Interfaces;
+using Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
@@ -8,9 +9,10 @@ namespace Application.Services
     public class PixService : IPixService
     {
         private readonly ILogger<PixService> _logger;
-
-        public PixService(ILogger<PixService> logger)
+        private readonly ITransactionRepository _transactionRepository;
+        public PixService(ITransactionRepository transactionRepository,ILogger<PixService> logger)
         {
+            _transactionRepository = transactionRepository;
             _logger = logger;
         }
 
@@ -64,8 +66,8 @@ namespace Application.Services
             var result = new PixKeyValidationDto
             {
                 IsValid = isValid,
-                PixKey = pixKey,
-                PixKeyType = pixKeyType,
+                keyValue = pixKey,
+                keyType = pixKeyType,
                 ValidationId = validationId,
                 ErrorMessage = isValid ? null : errorMessage,
                 ValidatedAt = DateTime.UtcNow

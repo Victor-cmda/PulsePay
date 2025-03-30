@@ -15,52 +15,47 @@ namespace Application.Services
         private readonly IWalletRepository _walletRepository;
         private readonly IBankAccountService _bankAccountService;
         private readonly ILogger<WithdrawService> _logger;
+        private readonly IListenerService _listenerService;
 
         public WithdrawService(
             IWithdrawRepository withdrawRepository,
             IWalletService walletService,
             IWalletRepository walletRepository,
             IBankAccountService bankAccountService,
+            IListenerService listenerService,
             ILogger<WithdrawService> logger)
         {
             _withdrawRepository = withdrawRepository;
             _walletService = walletService;
             _walletRepository = walletRepository;
             _bankAccountService = bankAccountService;
+            _listenerService = listenerService;
             _logger = logger;
         }
 
         public async Task<WithdrawDto> RequestWithdrawAsync(WithdrawRequestDto request)
         {
-            // Verify if the bank account exists and is verified
             var bankAccount = await _bankAccountService.GetBankAccountAsync(request.BankAccountId);
             if (!bankAccount.IsVerified)
                 throw new ValidationException("A conta bancária selecionada não está verificada");
 
-            // Find the appropriate withdrawal wallet
             var wallets = await _walletRepository.GetAllBySellerIdAsync(request.SellerId);
 
-            // First try to find a Withdrawal wallet
             var withdrawalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.Withdrawal);
 
-            // If no Withdrawal wallet exists, try to use a General wallet
             var generalWallet = wallets.FirstOrDefault(w => w.WalletType == WalletType.General);
 
-            // Use the specified wallet ID if it's a Withdrawal or General wallet
             var requestedWallet = await _walletRepository.GetByIdAsync(request.WalletId);
             if (requestedWallet != null &&
                 (requestedWallet.WalletType == WalletType.Withdrawal || requestedWallet.WalletType == WalletType.General))
             {
-                // Use the requested wallet if it's of appropriate type
                 withdrawalWallet = requestedWallet;
             }
             else if (requestedWallet != null && requestedWallet.WalletType == WalletType.Deposit)
             {
-                // Cannot withdraw from a Deposit wallet
                 throw new ValidationException("Não é possível realizar saques a partir de uma carteira do tipo Depósito (Deposit). Use uma carteira de Saque (Withdrawal) ou Geral (General).");
             }
 
-            // Determine which wallet to use for the withdrawal
             var sourceWallet = withdrawalWallet ?? generalWallet;
 
             if (sourceWallet == null)
@@ -68,12 +63,10 @@ namespace Application.Services
                 throw new ValidationException("Não foi encontrada uma carteira de Saque (Withdrawal) ou Geral (General) para processar o saque");
             }
 
-            // Check if the balance is sufficient
             var hasBalance = await _walletService.HasSufficientFundsAsync(sourceWallet.Id, request.Amount);
             if (!hasBalance)
                 throw new InsufficientFundsException("Saldo insuficiente para realizar este saque");
 
-            // Deduct the amount from the wallet
             await _walletService.DeductFundsAsync(sourceWallet.Id, new WalletOperationDto
             {
                 Amount = request.Amount,
@@ -81,17 +74,16 @@ namespace Application.Services
                 Reference = $"WITHDRAW_REQUEST_{Guid.NewGuid()}"
             });
 
-            // Create the withdrawal request
             var withdraw = new Withdraw
             {
                 Id = Guid.NewGuid(),
                 SellerId = request.SellerId,
                 Amount = request.Amount,
                 Status = WithdrawStatus.Pending,
-                WithdrawMethod = request.Method, // PIX, TED, etc.
+                WithdrawMethod = request.Method,
                 RequestedAt = DateTime.UtcNow,
                 BankAccountId = request.BankAccountId,
-                WalletId = sourceWallet.Id  // Store which wallet was used
+                WalletId = sourceWallet.Id
             };
 
             var result = await _withdrawRepository.CreateAsync(withdraw);
@@ -138,6 +130,8 @@ namespace Application.Services
             var result = await _withdrawRepository.UpdateAsync(withdraw);
             _logger.LogInformation("Saque {WithdrawId} aprovado pelo admin {AdminId}", id, adminId);
 
+            await SendWithdrawNotification(result);
+
             return MapToDto(result);
         }
 
@@ -168,6 +162,8 @@ namespace Application.Services
             _logger.LogInformation("Saque {WithdrawId} rejeitado pelo admin {AdminId}. Motivo: {Reason}",
                 id, adminId, reason);
 
+            await SendWithdrawNotification(result);
+
             return MapToDto(result);
         }
 
@@ -188,6 +184,8 @@ namespace Application.Services
             _logger.LogInformation("Saque {WithdrawId} processado com sucesso. Comprovante: {Receipt}",
                 id, transactionReceipt);
 
+            await SendWithdrawNotification(result);
+
             return MapToDto(result);
         }
 
@@ -199,6 +197,21 @@ namespace Application.Services
         public async Task<decimal> GetTotalPendingWithdrawAmountAsync()
         {
             return await _withdrawRepository.GetTotalAmountByStatusAsync(WithdrawStatus.Pending);
+        }
+
+        private async Task SendWithdrawNotification(Withdraw withdraw)
+        {
+            try
+            {
+                var notification = NotificationHelpers.CreateWithdrawNotification(withdraw);
+                await _listenerService.GenerateNotification(notification);
+                _logger.LogInformation("Withdraw notification sent: {WithdrawId}, Status: {Status}",
+                    withdraw.Id, withdraw.Status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending withdraw notification {WithdrawId}", withdraw.Id);
+            }
         }
 
         private WithdrawDto MapToDto(Withdraw withdraw)

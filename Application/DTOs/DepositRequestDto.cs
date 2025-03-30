@@ -13,19 +13,6 @@ namespace Application.DTOs
         [Required]
         [Range(0.01, double.MaxValue, ErrorMessage = "O valor deve ser maior que zero")]
         public decimal Amount { get; set; }
-
-        [Required]
-        public string SellerName { get; set; }
-
-        [Required]
-        [EmailAddress]
-        public string SellerEmail { get; set; }
-
-        [Required]
-        public string SellerDocument { get; set; }
-
-        [Required]
-        public string SellerDocumentType { get; set; }
     }
 
     public class DepositDto

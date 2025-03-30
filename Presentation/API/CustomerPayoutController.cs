@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 using Presentation.API.Common.Responses;
 using Shared.Exceptions;
 using System.Net;
-using System.Security.Claims;
+using XAct.Messages;
 
 namespace Presentation.API
 {
     [ApiController]
-    [Route("api/customer-payouts")]
+    [Route("")]
     [Authorize]
     public class CustomerPayoutController : ControllerBase
     {

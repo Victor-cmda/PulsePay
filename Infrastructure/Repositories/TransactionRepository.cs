@@ -43,5 +43,10 @@ namespace Infrastructure.Repositories
         {
             return await _context.Set<Transaction>().FirstOrDefaultAsync(x => x.PaymentId == paymentId);
         }
+
+        public async Task<Transaction> GetByDocumentCustomer(string document)
+        {
+            return await _context.Set<Transaction>().FirstOrDefaultAsync(x => x.DocumentCustomer == document);
+        }
     }
 }

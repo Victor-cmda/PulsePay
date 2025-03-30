@@ -1,4 +1,5 @@
-﻿using Application.DTOs.BankSlip;
+﻿using Application.DTOs;
+using Application.DTOs.BankSlip;
 using Application.DTOs.CreditCard;
 using Application.DTOs.Pix;
 

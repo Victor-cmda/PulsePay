@@ -5,10 +5,6 @@ using Domain.Models;
 using Microsoft.Extensions.Logging;
 using Shared.Enums;
 using Shared.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Application.Services
 {
@@ -20,19 +16,21 @@ namespace Application.Services
         private readonly IPixService _pixService;
         private readonly IPixValidationCacheService _validationCacheService;
         private readonly ILogger<CustomerPayoutService> _logger;
-
+        private readonly IListenerService _listenerService;
         public CustomerPayoutService(
             ICustomerPayoutRepository payoutRepository,
             IWalletRepository walletRepository,
             IWalletService walletService,
             IPixService pixService,
             IPixValidationCacheService validationCacheService,
+            IListenerService listenerService,
             ILogger<CustomerPayoutService> logger)
         {
             _payoutRepository = payoutRepository;
             _walletRepository = walletRepository;
             _walletService = walletService;
             _pixService = pixService;
+            _listenerService = listenerService;
             _validationCacheService = validationCacheService;
             _logger = logger;
         }
@@ -116,15 +114,18 @@ namespace Application.Services
                 Amount = request.Amount,
                 Status = CustomerPayoutStatus.Pending,
                 RequestedAt = DateTime.UtcNow,
-                PixKey = validationData.PixKey,
-                PixKeyType = validationData.PixKeyType,
+                PixKey = validationData.keyValue,
+                PixKeyType = validationData.keyType,
                 Description = request.Description ?? "Pagamento PIX",
                 ValidationId = request.ValidationId,
                 ValidatedAt = DateTime.UtcNow,
                 WalletId = payoutWallet.Id
             };
 
+
             var result = await _payoutRepository.CreateAsync(payout);
+
+            await SendPayoutNotification(payout);
 
             await _validationCacheService.RemoveValidationAsync(request.ValidationId);
 
@@ -256,6 +257,8 @@ namespace Application.Services
                     throw new ValidationException($"Falha na confirmação do pagamento: {confirmationResult.ErrorMessage}");
                 }
 
+                await SendPayoutNotification(payout);
+
                 return MapToResponseDto(payout);
             }
             catch (Exception ex)
@@ -341,6 +344,8 @@ namespace Application.Services
                 _logger.LogInformation("Pagamento rejeitado: {PayoutId}, Motivo: {Reason}, Admin: {AdminId}",
                     payoutId, reason, adminId);
 
+                await SendPayoutNotification(payout);
+
                 return MapToResponseDto(payout);
             }
             catch (Exception ex)
@@ -351,17 +356,33 @@ namespace Application.Services
             }
         }
 
+        private async Task SendPayoutNotification(CustomerPayout payout)
+        {
+            try
+            {
+                var notification = NotificationHelpers.CreatePayoutNotification(payout);
+                await _listenerService.GenerateNotification(notification);
+                _logger.LogInformation("Payout notification sent: {PayoutId}, Status: {Status}",
+                    payout.Id, payout.Status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending payout notification {PayoutId}", payout.Id);
+            }
+        }
+
         private CustomerPayoutResponseDto MapToResponseDto(CustomerPayout payout)
         {
             return new CustomerPayoutResponseDto
             {
                 Id = payout.Id,
                 Amount = payout.Amount,
+                Description = payout.Description,
                 Status = payout.Status.ToString(),
                 RequestedAt = payout.RequestedAt,
                 ProcessedAt = payout.ProcessedAt,
-                PixKey = payout.PixKey,
                 PixKeyType = payout.PixKeyType,
+                PixKeyValue = payout.PixKey,
                 ValidationId = payout.ValidationId,
                 PaymentId = payout.PaymentId
             };
